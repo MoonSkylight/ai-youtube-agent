@@ -1,0 +1,3 @@
+import { supabaseAdmin } from "@/lib/db/server";
+export async function acquireWorkerLock(lockKey:string, ttlSeconds=120){ const now=new Date(); const expiresAt=new Date(now.getTime()+ttlSeconds*1000).toISOString(); const { data: existing } = await supabaseAdmin.from("worker_locks").select("lock_key, expires_at").eq("lock_key", lockKey).maybeSingle(); if (existing && new Date(existing.expires_at) > now) return { acquired:false }; await supabaseAdmin.from("worker_locks").upsert({ lock_key: lockKey, acquired_at: now.toISOString(), expires_at: expiresAt, metadata: {} }); return { acquired:true, expiresAt }; }
+export async function releaseWorkerLock(lockKey:string){ await supabaseAdmin.from("worker_locks").delete().eq("lock_key", lockKey); }

@@ -1,0 +1,3 @@
+import OpenAI from "openai"; import { CONTENT_AGENT_PROMPT } from "../prompts"; import { AgentResult } from "../types"; import { safeJsonParse } from "../utils";
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+export async function runContentAgent(context: Record<string, unknown>): Promise<AgentResult> { const response = await client.responses.create({ model: "gpt-5", input: [{ role: "system", content: CONTENT_AGENT_PROMPT }, { role: "user", content: `Context: ${JSON.stringify(context)}` }] }); const text = response.output_text; const parsed = safeJsonParse<AgentResult>(text); return parsed ?? { summary: text || "No summary returned." }; }

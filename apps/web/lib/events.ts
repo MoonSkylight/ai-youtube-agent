@@ -1,0 +1,2 @@
+import { supabaseAdmin } from "@/lib/db/server";
+export async function logEvent(params: { userId?: string | null; eventType: string; entityType?: string; entityId?: string; status?: string; message: string; metadata?: Record<string, unknown>; }) { await supabaseAdmin.from("event_logs").insert({ user_id: params.userId ?? null, event_type: params.eventType, entity_type: params.entityType ?? null, entity_id: params.entityId ?? null, status: params.status ?? "info", message: params.message, metadata: params.metadata ?? {} }); }

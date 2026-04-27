@@ -1,0 +1,2 @@
+"use client"; import { useState } from "react";
+export function ArchiveButton({ endpoint, label = "Archive" }: { endpoint: string; label?: string }) { const [loading,setLoading]=useState(false); async function handleArchive(){ setLoading(true); try{ await fetch(endpoint, { method:"POST" }); window.location.reload(); } finally { setLoading(false); } } return <button disabled={loading} onClick={handleArchive} className="rounded-xl border px-3 py-2 text-sm">{loading ? "Saving..." : label}</button>; }

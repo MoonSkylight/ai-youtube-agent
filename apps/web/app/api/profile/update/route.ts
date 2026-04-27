@@ -1,0 +1,6 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { requireUser } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/db/server";
+const bodySchema = z.object({ displayName: z.string().min(1), businessName: z.string().optional(), niche: z.string().optional(), timezone: z.string().min(1), preferredTone: z.string().optional(), workHoursPerDay: z.number().min(0).max(24).optional() });
+export async function POST(request: NextRequest) { try { const user = await requireUser(); const body = bodySchema.parse(await request.json()); const { data, error } = await supabaseAdmin.from("profiles").upsert({ user_id: user.id, display_name: body.displayName, business_name: body.businessName ?? null, niche: body.niche ?? null, timezone: body.timezone, preferred_tone: body.preferredTone ?? null, work_hours_per_day: body.workHoursPerDay ?? null, updated_at: new Date().toISOString() }).select("*").single(); if (error) return NextResponse.json({ ok:false, error:error.message }, { status:500 }); return NextResponse.json({ ok:true, profile:data }); } catch (error) { console.error(error); return NextResponse.json({ ok:false, error:"Failed to update profile" }, { status:500 }); } }

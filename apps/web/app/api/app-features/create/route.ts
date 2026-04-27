@@ -1,0 +1,6 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { requireUser } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/db/server";
+const bodySchema = z.object({ projectId: z.string().uuid(), name: z.string().min(1), description: z.string().optional(), priority: z.enum(["low","medium","high","critical"]).default("medium"), spec: z.string().optional() });
+export async function POST(request: NextRequest) { try { const user = await requireUser(); const body = bodySchema.parse(await request.json()); const { data: project, error: projectError } = await supabaseAdmin.from("app_projects").select("id, user_id").eq("id", body.projectId).eq("user_id", user.id).single(); if (projectError || !project) return NextResponse.json({ ok:false, error:"Project not found" }, { status:404 }); const { data, error } = await supabaseAdmin.from("app_features").insert({ project_id: project.id, name: body.name, description: body.description ?? null, priority: body.priority, spec: body.spec ?? null, status: "draft" }).select("*").single(); if (error) return NextResponse.json({ ok:false, error:error.message }, { status:500 }); return NextResponse.json({ ok:true, feature:data }); } catch (error) { console.error(error); return NextResponse.json({ ok:false, error:"Failed to create app feature" }, { status:500 }); } }

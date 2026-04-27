@@ -1,0 +1,32 @@
+"use client";
+
+export default function CreateVideoButton({ scriptId }: { scriptId: string }) {
+  return (
+    <button
+      style={{ marginTop: 12, padding: "10px 16px", borderRadius: 8 }}
+      onClick={async () => {
+        // ensure voice exists first
+        await fetch("/api/voice-from-script", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scriptId }),
+        });
+
+        const res = await fetch("/api/render-video", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scriptId }),
+        });
+
+        const data = await res.json();
+        if (data.ok) {
+          alert("🎬 Video rendered! Check server /tmp folder.");
+        } else {
+          alert("❌ " + (data.error || "failed"));
+        }
+      }}
+    >
+      🎬 Create Video (MP4)
+    </button>
+  );
+}

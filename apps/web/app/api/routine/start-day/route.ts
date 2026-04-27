@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth";
+import { runRoutineAgent } from "@/lib/agents/routine-agent";
+import { supabaseAdmin } from "@/lib/db/server";
+export async function POST() { try { const user = await requireUser(); const { data: openTasks } = await supabaseAdmin.from("tasks").select("id, title, category, priority, status").eq("user_id", user.id).in("status", ["draft","pending","in_progress"]); const result = await runRoutineAgent({ intent: "start_day", tasks: openTasks ?? [], date: new Date().toISOString().slice(0,10) }); const { data, error } = await supabaseAdmin.from("routines").insert({ user_id: user.id, routine_date: new Date().toISOString().slice(0,10), morning_plan: result.summary, top_priorities: result.topPriorities ?? [] }).select("*").single(); if (error) return NextResponse.json({ ok:false, error:error.message }, { status:500 }); return NextResponse.json({ ok:true, routine:data, result }); } catch (error) { console.error(error); return NextResponse.json({ ok:false, error:"Failed to start day" }, { status:500 }); } }

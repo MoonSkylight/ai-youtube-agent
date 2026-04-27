@@ -1,0 +1,17 @@
+node_modules
+.next
+tmp
+.env.local
+.env
+youtube-token.json
+*.mp4
+*.mp3
+dist
+build
+.vercel
+
+apps/web/node_modules
+apps/web/.next
+apps/web/tmp
+apps/web/.env.local
+apps/web/youtube-token.json

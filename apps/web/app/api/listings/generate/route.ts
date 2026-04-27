@@ -1,0 +1,7 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { requireUser } from "@/lib/auth";
+import { runEcommerceAgent } from "@/lib/agents/ecommerce-agent";
+import { supabaseAdmin } from "@/lib/db/server";
+const bodySchema = z.object({ marketplace: z.enum(["amazon","ebay"]), productTitle: z.string().min(1), brand: z.string().optional(), category: z.string().optional(), costPrice: z.number().optional(), sellPrice: z.number().optional(), notes: z.string().optional(), productId: z.string().uuid().optional() });
+export async function POST(request: NextRequest) { try { const user = await requireUser(); const body = bodySchema.parse(await request.json()); const agentResult = await runEcommerceAgent({ intent: "generate_listing_draft", ...body }); const { data, error } = await supabaseAdmin.from("listings").insert({ user_id: user.id, product_id: body.productId ?? null, marketplace: body.marketplace, status: "draft", title: body.productTitle, description: agentResult.summary, keywords: agentResult.topPriorities ?? [], price: body.sellPrice ?? null }).select("*").single(); if (error) return NextResponse.json({ ok:false, error:error.message }, { status:500 }); return NextResponse.json({ ok:true, listing:data, agentResult }); } catch (error) { console.error(error); return NextResponse.json({ ok:false, error:"Failed to generate listing" }, { status:500 }); } }

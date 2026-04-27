@@ -1,0 +1,2 @@
+"use client";
+export function SimpleBarChart({ items }: { items: Array<{ label: string; value: number }> }) { const max = Math.max(...items.map((item) => item.value), 1); return <div className="space-y-4">{items.map((item)=><div key={item.label}><div className="mb-1 flex items-center justify-between text-sm"><span>{item.label}</span><span>{item.value}</span></div><div className="h-3 rounded-full bg-neutral-100"><div className="h-3 rounded-full bg-neutral-900" style={{ width: `${(item.value / max) * 100}%` }} /></div></div>)}</div>; }

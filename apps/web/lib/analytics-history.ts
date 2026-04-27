@@ -1,0 +1,2 @@
+import { requireUser } from "@/lib/auth"; import { supabaseAdmin } from "@/lib/db/server";
+export async function getAnalyticsHistory(limit=30) { const user = await requireUser(); const { data } = await supabaseAdmin.from("analytics_snapshots").select("snapshot_date, open_tasks, pending_approvals, listing_drafts, script_drafts, queued_publish_jobs, posted_publish_jobs, app_projects").eq("user_id", user.id).order("snapshot_date", { ascending: true }).limit(limit); return data ?? []; }

@@ -1,0 +1,1 @@
+export function SummaryCard({ title, value }: { title: string; value: string | number; }) { return <div className="rounded-2xl border p-5 shadow-sm"><p className="text-sm text-neutral-500">{title}</p><p className="mt-2 text-3xl font-semibold">{value}</p></div>; }

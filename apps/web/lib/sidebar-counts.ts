@@ -1,0 +1,2 @@
+import { requireUser } from "@/lib/auth"; import { supabaseAdmin } from "@/lib/db/server";
+export async function getSidebarCounts() { const user = await requireUser(); const [notifications, approvals] = await Promise.all([supabaseAdmin.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("is_read", false), supabaseAdmin.from("approvals").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "pending")]); return { unreadNotifications: notifications.count ?? 0, pendingApprovals: approvals.count ?? 0 }; }
