@@ -5,8 +5,8 @@ import { useState } from "react";
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -55,16 +55,16 @@ export default function LoginPage() {
           type="email"
           placeholder="Email"
           value={email}
-          required
           onChange={(e) => setEmail(e.target.value)}
+          required
         />
 
         <input
           type="password"
           placeholder="Password"
           value={password}
-          required
           onChange={(e) => setPassword(e.target.value)}
+          required
         />
 
         <button type="submit" disabled={loading}>
@@ -75,10 +75,6 @@ export default function LoginPage() {
       {message ? (
         <p style={{ marginTop: 12, color: "red" }}>{message}</p>
       ) : null}
-
-      <p style={{ marginTop: 12, fontSize: 12 }}>
-        Email entered: {email || "(empty)"}
-      </p>
     </div>
   );
 }
