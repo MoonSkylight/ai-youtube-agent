@@ -1,4 +1,43 @@
-import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
-import { supabaseAdmin } from "@/lib/db/server";
-export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) { try { const user = await requireUser(); const { id } = await context.params; const { data: feature } = await supabaseAdmin.from("app_features").select("id, name, project_id").eq("id", id).maybeSingle(); if (!feature) return NextResponse.json({ ok:false, error:"Feature not found" }, { status:404 }); const { data: project } = await supabaseAdmin.from("app_projects").select("id").eq("id", feature.project_id).eq("user_id", user.id).maybeSingle(); if (!project) return NextResponse.json({ ok:false, error:"Unauthorized" }, { status:403 }); const query = supabaseAdmin.from("app_features"); const result = await query.delete().eq("id", id); return NextResponse.json({ ok:true }); } catch (error) { console.error(error); return NextResponse.json({ ok:false, error:"Failed to delete feature" }, { status:500 }); } }
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params;
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      return NextResponse.json(
+        { ok: false, error: "Supabase env vars missing" },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    const { error } = await supabase
+      .from("app_features")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error: any) {
+    console.error(error);
+    return NextResponse.json(
+      { ok: false, error: error.message || "Delete failed" },
+      { status: 500 }
+    );
+  }
+}
