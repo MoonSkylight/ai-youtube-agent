@@ -1,67 +1,84 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+"use client";
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json().catch(() => ({}));
-    const email = String(body.email || "").trim();
-    const password = String(body.password || "");
+import { useState } from "react";
 
-    if (!email || !password) {
-      return NextResponse.json(
-        { ok: false, error: "Email and password are required" },
-        { status: 400 }
-      );
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!email.trim() || !password.trim()) {
+      setMessage("Please enter both email and password.");
+      return;
     }
 
-    let response = NextResponse.json({ ok: true });
+    setLoading(true);
+    setMessage("");
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll();
-          },
-          setAll(
-            cookiesToSet: {
-              name: string;
-              value: string;
-              options?: any;
-            }[]
-          ) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              response.cookies.set(name, value, options);
-            });
-          },
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        window.location.href = data.redirectTo || "/content";
+        return;
       }
-    );
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      return NextResponse.json(
-        { ok: false, error: error.message },
-        { status: 400 }
-      );
+      setMessage(data.error || "Login failed");
+    } catch (error: any) {
+      setMessage(error.message || "Login request failed");
+    } finally {
+      setLoading(false);
     }
-
-    response = NextResponse.json({
-      ok: true,
-      redirectTo: "/content",
-    });
-
-    return response;
-  } catch (error: any) {
-    console.error(error);
-    return NextResponse.json(
-      { ok: false, error: error.message || "Login failed" },
-      { status: 500 }
-    );
   }
+
+  return (
+    <div style={{ padding: 40, maxWidth: 420 }}>
+      <h1>Login</h1>
+
+      <form onSubmit={handleLogin} style={{ display: "grid", gap: 12 }}>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          required
+          onChange={(e) => setEmail(e.target.value)}
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          required
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        <button type="submit" disabled={loading}>
+          {loading ? "Logging in..." : "Login"}
+        </button>
+      </form>
+
+      {message ? (
+        <p style={{ marginTop: 12, color: "red" }}>{message}</p>
+      ) : null}
+
+      <p style={{ marginTop: 12, fontSize: 12 }}>
+        Email entered: {email || "(empty)"}
+      </p>
+    </div>
+  );
 }

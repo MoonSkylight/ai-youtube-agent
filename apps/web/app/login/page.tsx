@@ -1,4 +1,84 @@
-import Link from "next/link";
+"use client";
+
+import { useState } from "react";
+
 export default function LoginPage() {
-  return <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6"><div className="rounded-2xl border p-8 shadow-sm"><h1 className="text-3xl font-bold">Log in</h1><p className="mt-2 text-sm text-neutral-500">Access your Master AI System dashboard.</p><form action="/api/auth/login" method="post" className="mt-6 space-y-4"><div><label className="mb-1 block text-sm font-medium">Email</label><input name="email" type="email" required className="w-full rounded-xl border px-4 py-3" placeholder="you@example.com" /></div><div><label className="mb-1 block text-sm font-medium">Password</label><input name="password" type="password" required className="w-full rounded-xl border px-4 py-3" placeholder="••••••••" /></div><button className="w-full rounded-xl border px-4 py-3 font-medium">Log in</button></form><p className="mt-4 text-sm text-neutral-500">No account? <Link href="/signup" className="underline">Create one</Link></p></div></main>;
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!email.trim() || !password.trim()) {
+      setMessage("Please enter both email and password.");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        window.location.href = data.redirectTo || "/content";
+        return;
+      }
+
+      setMessage(data.error || "Login failed");
+    } catch (error: any) {
+      setMessage(error.message || "Login request failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div style={{ padding: 40, maxWidth: 420 }}>
+      <h1>Login</h1>
+
+      <form onSubmit={handleLogin} style={{ display: "grid", gap: 12 }}>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          required
+          onChange={(e) => setEmail(e.target.value)}
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          required
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        <button type="submit" disabled={loading}>
+          {loading ? "Logging in..." : "Login"}
+        </button>
+      </form>
+
+      {message ? (
+        <p style={{ marginTop: 12, color: "red" }}>{message}</p>
+      ) : null}
+
+      <p style={{ marginTop: 12, fontSize: 12 }}>
+        Email entered: {email || "(empty)"}
+      </p>
+    </div>
+  );
 }
