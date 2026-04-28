@@ -4,17 +4,16 @@ export async function POST(request: NextRequest) {
   try {
     const response = NextResponse.json({ ok: true });
 
-    // Example cookies handler (fixed)
     const cookies = {
       getAll() {
         return request.cookies.getAll();
       },
       setAll(
-        cookiesToSet: Array<{
+        cookiesToSet: {
           name: string;
           value: string;
           options?: any;
-        }>
+        }[]
       ) {
         cookiesToSet.forEach(({ name, value, options }) => {
           response.cookies.set(name, value, options);
@@ -32,7 +31,7 @@ export async function POST(request: NextRequest) {
     ]);
 
     return response;
-  } catch (error: any) {
+  } catch (error) {
     console.error(error);
     return NextResponse.json({
       ok: false,
