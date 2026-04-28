@@ -3,7 +3,6 @@ import { createServerClient } from "@supabase/ssr";
 
 export async function POST(request: NextRequest) {
   try {
-    // ✅ FIX: use JSON (matches frontend)
     const body = await request.json();
 
     const platform = String(body.platform || "youtube");
@@ -22,7 +21,13 @@ export async function POST(request: NextRequest) {
           getAll() {
             return request.cookies.getAll();
           },
-          setAll(cookiesToSet) {
+          setAll(
+            cookiesToSet: {
+              name: string;
+              value: string;
+              options?: any;
+            }[]
+          ) {
             cookiesToSet.forEach(({ name, value, options }) => {
               response.cookies.set(name, value, options);
             });
@@ -31,7 +36,6 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // ✅ Get logged-in user
     const {
       data: { user },
       error: userError,
@@ -44,7 +48,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ✅ Improved YouTube-style prompt
     const prompt = `You are a professional YouTube growth strategist.
 
 Create a HIGH-ENGAGEMENT ${platform} video script.
@@ -71,7 +74,6 @@ DESCRIPTION:
 HASHTAGS:
 `;
 
-    // ✅ OpenAI request
     const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -106,7 +108,6 @@ HASHTAGS:
 
     const output = aiData.choices?.[0]?.message?.content || "";
 
-    // ✅ Save to Supabase
     const { data: savedScript, error: saveError } = await supabase
       .from("scripts")
       .insert({
@@ -129,12 +130,13 @@ HASHTAGS:
       );
     }
 
-    return NextResponse.json({
+    response = NextResponse.json({
       ok: true,
       script: output,
       savedScript,
     });
 
+    return response;
   } catch (error) {
     console.error(error);
     return NextResponse.json(
