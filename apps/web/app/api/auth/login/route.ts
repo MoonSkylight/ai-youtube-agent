@@ -6,11 +6,11 @@ cookies: {
     cookiesToSet: Array<{
       name: string;
       value: string;
-      options?: Parameters<typeof response.cookies.set>[2];
+      options?: any;
     }>
   ) {
     cookiesToSet.forEach(({ name, value, options }) => {
       response.cookies.set(name, value, options);
     });
   },
-}
+},
