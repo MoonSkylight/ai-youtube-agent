@@ -1,84 +1,29 @@
-"use client";
+import { NextRequest, NextResponse } from "next/server";
 
-import { useState } from "react";
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+    console.log("LOGIN BODY:", body);
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
+    const email = body.email;
+    const password = body.password;
 
-    if (!email.trim() || !password.trim()) {
-      setMessage("Please enter both email and password.");
-      return;
-    }
-
-    setLoading(true);
-    setMessage("");
-
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-          password,
-        }),
+    if (!email || !password) {
+      return NextResponse.json({
+        ok: false,
+        error: "Email and password are required",
       });
-
-      const data = await res.json();
-
-      if (data.ok) {
-        window.location.href = data.redirectTo || "/content";
-        return;
-      }
-
-      setMessage(data.error || "Login failed");
-    } catch (error: any) {
-      setMessage(error.message || "Login request failed");
-    } finally {
-      setLoading(false);
     }
+
+    return NextResponse.json({
+      ok: true,
+      redirectTo: "/content",
+    });
+  } catch (error: any) {
+    return NextResponse.json({
+      ok: false,
+      error: "Login failed",
+    });
   }
-
-  return (
-    <div style={{ padding: 40, maxWidth: 420 }}>
-      <h1>Login</h1>
-
-      <form onSubmit={handleLogin} style={{ display: "grid", gap: 12 }}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          required
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          required
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <button type="submit" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
-      </form>
-
-      {message ? (
-        <p style={{ marginTop: 12, color: "red" }}>{message}</p>
-      ) : null}
-
-      <p style={{ marginTop: 12, fontSize: 12 }}>
-        Email entered: {email || "(empty)"}
-      </p>
-    </div>
-  );
 }
