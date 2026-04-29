@@ -16,20 +16,21 @@ export default function CreateVideoButton({ scriptId }: { scriptId: string }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          scriptId,
-        }),
+        body: JSON.stringify({ scriptId }),
       });
 
       const data = await res.json();
 
-      if (!data.ok) {
+      if (!res.ok || !data.ok) {
         setMessage(data.error || "Render failed");
         return;
       }
 
-      setMessage("Video ready: " + data.videoUrl);
-      window.open(data.videoUrl, "_blank");
+      setMessage("Video ready");
+
+      if (data.videoUrl) {
+        window.open(data.videoUrl, "_blank");
+      }
     } catch (error: any) {
       setMessage(error.message || "Render failed");
     } finally {
