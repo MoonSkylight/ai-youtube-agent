@@ -25,7 +25,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let response = NextResponse.next();
+    const response = NextResponse.json({
+      ok: true,
+      redirectTo: "/content",
+    });
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,14 +38,8 @@ export async function POST(request: NextRequest) {
           getAll() {
             return request.cookies.getAll();
           },
-          setAll(
-            cookiesToSet: {
-              name: string;
-              value: string;
-              options?: any;
-            }[]
-          ) {
-            cookiesToSet.forEach(({ name, value, options }) => {
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }: any) => {
               response.cookies.set(name, value, options);
             });
           },
@@ -62,13 +59,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      ok: true,
-      redirectTo: "/content",
-    });
+    return response;
   } catch (error: any) {
-    console.error(error);
-
     return NextResponse.json(
       { ok: false, error: error.message || "Login failed" },
       { status: 500 }
