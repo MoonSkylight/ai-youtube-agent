@@ -12,7 +12,13 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet: any[]) {
+        setAll(
+          cookiesToSet: Array<{
+            name: string;
+            value: string;
+            options?: any;
+          }>
+        ) {
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);
           });
@@ -25,9 +31,15 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user && request.nextUrl.pathname.startsWith("/content")) {
+  const pathname = request.nextUrl.pathname;
+
+  if (!user && pathname.startsWith("/content")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
   return response;
 }
+
+export const config = {
+  matcher: ["/content/:path*"],
+};
