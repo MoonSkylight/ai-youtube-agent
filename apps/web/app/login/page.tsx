@@ -52,6 +52,7 @@ export default function LoginPage() {
         <input
           type="email"
           placeholder="Email"
+          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -59,15 +60,12 @@ export default function LoginPage() {
         <input
           type="password"
           placeholder="Password"
+          autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button
-          type="button"
-          onClick={handleLogin}
-          disabled={loading}
-        >
+        <button type="button" onClick={handleLogin} disabled={loading}>
           {loading ? "Logging in..." : "Login"}
         </button>
       </div>
