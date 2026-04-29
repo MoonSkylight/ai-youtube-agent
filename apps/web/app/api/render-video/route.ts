@@ -1,26 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
 
-    const title = String(body.title || "Generated Video").trim();
-    const script = String(body.script || "").trim();
+    const scriptId = String(body.scriptId || "").trim();
 
-    if (!script) {
+    if (!scriptId) {
       return NextResponse.json(
         {
           ok: false,
-          error: "Script is required",
+          error: "scriptId is required",
         },
         { status: 400 }
       );
     }
 
-    // Temporary fallback so the app flow works without ElevenLabs/ffmpeg issues
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    const { data, error } = await supabase
+      .from("scripts")
+      .select("id, title, script_body")
+      .eq("id", scriptId)
+      .single();
+
+    if (error || !data) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Script not found",
+        },
+        { status: 404 }
+      );
+    }
+
+    const script = String(data.script_body || "").trim();
+
+    if (!script) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Script is empty",
+        },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json({
       ok: true,
-      title,
+      title: data.title || "Generated Video",
       videoUrl:
         "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4",
       message: "Temporary fallback video returned successfully",
