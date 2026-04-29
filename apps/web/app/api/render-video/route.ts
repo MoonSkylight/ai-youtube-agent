@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,15 +13,40 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data, error } = await supabase
+      .from("scripts")
+      .select("title, script_body")
+      .eq("id", scriptId)
+      .single();
+
+    if (error || !data) {
+      return NextResponse.json(
+        { ok: false, error: "Script not found" },
+        { status: 404 }
+      );
+    }
+
+    const text = encodeURIComponent(data.script_body || "");
+
+    // Simple generated "video" using text render service
+    const videoUrl = `https://dummyimage.com/1280x720/000/fff&text=${text.slice(
+      0,
+      200
+    )}`;
+
     return NextResponse.json({
       ok: true,
-      title: "Generated Video",
-      videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
-      message: "Fallback video ready",
+      title: data.title,
+      videoUrl,
     });
-  } catch (error: any) {
+  } catch (err: any) {
     return NextResponse.json(
-      { ok: false, error: error?.message || "Render failed" },
+      { ok: false, error: err.message || "Render failed" },
       { status: 500 }
     );
   }

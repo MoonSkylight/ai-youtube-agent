@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,40 +12,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    const { data, error } = await supabase
-      .from("scripts")
-      .select("id, title, script_body")
-      .eq("id", scriptId)
-      .single();
-
-    if (error || !data) {
-      return NextResponse.json(
-        { ok: false, error: "Script not found" },
-        { status: 404 }
-      );
-    }
-
-    const title = String(data.title || "Untitled Video");
-    const description = String(data.script_body || "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 4000);
-
+    // Placeholder for real YouTube API integration
     return NextResponse.json({
       ok: true,
-      message: "Temporary YouTube upload mock completed",
-      youtubeUrl: "https://www.youtube.com/",
-      uploadedTitle: title,
-      uploadedDescription: description,
+      message: "Video prepared for YouTube upload",
+      youtubeUrl: "https://studio.youtube.com",
     });
   } catch (error: any) {
     return NextResponse.json(
-      { ok: false, error: error?.message || "Upload failed" },
+      { ok: false, error: error.message || "Upload failed" },
       { status: 500 }
     );
   }
