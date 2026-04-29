@@ -6,7 +6,6 @@ export async function POST(req: NextRequest) {
 
     const title = String(body.title || "Generated Video").trim();
     const script = String(body.script || "").trim();
-    const voiceUrl = String(body.voiceUrl || "").trim();
 
     if (!script) {
       return NextResponse.json(
@@ -18,13 +17,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Temporary fallback so the app flow works without ElevenLabs/ffmpeg issues
     return NextResponse.json({
       ok: true,
       title,
       videoUrl:
         "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4",
-      usedVoiceUrl: voiceUrl || null,
-      message: "Temporary render fallback used successfully",
+      message: "Temporary fallback video returned successfully",
     });
   } catch (error: any) {
     return NextResponse.json(
