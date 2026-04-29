@@ -8,9 +8,7 @@ export default function LoginPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-
+  async function handleLogin() {
     setLoading(true);
     setMessage("");
 
@@ -20,7 +18,10 @@ export default function LoginPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password.trim(),
+        }),
       });
 
       const data = await res.json();
@@ -39,10 +40,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ padding: 40 }}>
+    <div style={{ padding: 40, maxWidth: 420 }}>
       <h1>Login</h1>
 
-      <form onSubmit={handleLogin}>
+      <div style={{ display: "grid", gap: 12 }}>
         <input
           type="email"
           placeholder="Email"
@@ -57,12 +58,14 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button type="submit" disabled={loading}>
+        <button onClick={handleLogin} disabled={loading}>
           {loading ? "Logging in..." : "Login"}
         </button>
-      </form>
+      </div>
 
-      {message ? <p style={{ color: "red" }}>{message}</p> : null}
+      {message ? (
+        <p style={{ marginTop: 12, color: "red" }}>{message}</p>
+      ) : null}
     </div>
   );
 }
