@@ -9,6 +9,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
+    if (!email.trim() || !password.trim()) {
+      setMessage("Please enter both email and password.");
+      return;
+    }
+
     setLoading(true);
     setMessage("");
 
@@ -58,7 +63,11 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button onClick={handleLogin} disabled={loading}>
+        <button
+          type="button"
+          onClick={handleLogin}
+          disabled={loading}
+        >
           {loading ? "Logging in..." : "Login"}
         </button>
       </div>
