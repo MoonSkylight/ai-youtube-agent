@@ -2,19 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json().catch(() => null);
+    let email = "";
+    let password = "";
 
-    console.log("BODY:", body);
+    const contentType = request.headers.get("content-type") || "";
 
-    if (!body) {
-      return NextResponse.json({
-        ok: false,
-        error: "No data received",
-      });
+    if (contentType.includes("application/json")) {
+      const body = await request.json().catch(() => ({}));
+      email = String(body.email || "").trim();
+      password = String(body.password || "");
+    } else {
+      const formData = await request.formData().catch(() => null);
+      email = String(formData?.get("email") || "").trim();
+      password = String(formData?.get("password") || "");
     }
-
-    const email = body.email;
-    const password = body.password;
 
     if (!email || !password) {
       return NextResponse.json({
@@ -23,17 +24,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // TEMP: bypass auth to confirm flow
     return NextResponse.json({
       ok: true,
       redirectTo: "/content",
     });
-
   } catch (error: any) {
     console.error(error);
     return NextResponse.json({
       ok: false,
-      error: "Login failed",
+      error: error.message || "Login failed",
     });
   }
 }
