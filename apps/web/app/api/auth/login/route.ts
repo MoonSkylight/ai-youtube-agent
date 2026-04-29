@@ -3,20 +3,10 @@ import { createServerClient } from "@supabase/ssr";
 
 export async function POST(request: NextRequest) {
   try {
-    let email = "";
-    let password = "";
+    const body = await request.json().catch(() => ({}));
 
-    const contentType = request.headers.get("content-type") || "";
-
-    if (contentType.includes("application/json")) {
-      const body = await request.json().catch(() => ({}));
-      email = String(body.email || "").trim();
-      password = String(body.password || "");
-    } else {
-      const formData = await request.formData().catch(() => null);
-      email = String(formData?.get("email") || "").trim();
-      password = String(formData?.get("password") || "");
-    }
+    const email = String(body.email || "").trim();
+    const password = String(body.password || "");
 
     if (!email || !password) {
       return NextResponse.json(
@@ -25,7 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = NextResponse.json({
+    let response = NextResponse.json({
       ok: true,
       redirectTo: "/content",
     });
@@ -61,8 +51,6 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error: any) {
-    console.error(error);
-
     return NextResponse.json(
       { ok: false, error: error.message || "Login failed" },
       { status: 500 }
