@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let response = NextResponse.json({
+    const response = NextResponse.json({
       ok: true,
       redirectTo: "/content",
     });
@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
           getAll() {
             return request.cookies.getAll();
           },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }: any) => {
+          setAll(cookiesToSet: any[]) {
+            cookiesToSet.forEach(({ name, value, options }) => {
               response.cookies.set(name, value, options);
             });
           },
