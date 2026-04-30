@@ -1,174 +1,93 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
-import CreateVideoButton from "@/components/CreateVideoButton";
-import UploadToYouTubeButton from "@/components/UploadToYouTubeButton";
+"use client";
 
-type ScriptRow = {
-  id: string;
-  title: string | null;
-  created_at: string | null;
-  script_body: string | null;
-};
+import { useState, useEffect } from "react";
 
-function formatDate(value: string | null) {
-  if (!value) return "Unknown date";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unknown date";
-  return date.toLocaleString();
-}
+export default function Page({ params }: any) {
+  const [data, setData] = useState<any>(null);
+  const [pageIndex, setPageIndex] = useState(0);
 
-export default async function ContentDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
+  useEffect(() => {
+    async function load() {
+      const res = await fetch(`/api/get-script?id=${params.id}`);
+      const json = await res.json();
+      setData(json);
+    }
+    load();
+  }, [params.id]);
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  if (!data) return <div style={{ padding: 40 }}>Loading...</div>;
 
-  const { data, error } = await supabase
-    .from("scripts")
-    .select("id, title, created_at, script_body")
-    .eq("id", id)
-    .single();
-
-  if (error || !data) {
-    notFound();
-  }
-
-  const script = data as ScriptRow;
+  // Split script into "pages"
+  const pages = (data.script_body || "")
+    .split("\n")
+    .filter((p: string) => p.trim().length > 0);
 
   return (
-    <main
+    <div
       style={{
         minHeight: "100vh",
         background: "#0b1020",
-        color: "#f8fafc",
-        padding: "32px 20px",
-        fontFamily:
-          'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        color: "#fff",
+        padding: 40,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
       }}
     >
+      {/* BOOK COVER */}
       <div
         style={{
-          maxWidth: 1100,
-          margin: "0 auto",
+          width: 320,
+          height: 420,
+          background: "linear-gradient(135deg, #6366f1, #22c55e)",
+          borderRadius: 20,
+          padding: 20,
+          marginBottom: 30,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+          textAlign: "center",
         }}
       >
-        <div style={{ marginBottom: 20 }}>
-          <Link
-            href="/content"
-            style={{
-              color: "#93c5fd",
-              textDecoration: "none",
-              fontWeight: 600,
-            }}
-          >
-            ← Back to Content
-          </Link>
-        </div>
-
-        <section
-          style={{
-            background: "#111827",
-            border: "1px solid #1f2937",
-            borderRadius: 24,
-            padding: 24,
-            marginBottom: 24,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 16,
-              flexWrap: "wrap",
-              marginBottom: 18,
-            }}
-          >
-            <div>
-              <p
-                style={{
-                  margin: 0,
-                  color: "#94a3b8",
-                  fontSize: 13,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Script Detail
-              </p>
-              <h1
-                style={{
-                  margin: "8px 0 0",
-                  fontSize: 36,
-                  lineHeight: 1.1,
-                }}
-              >
-                {script.title || "Untitled Script"}
-              </h1>
-              <p
-                style={{
-                  margin: "10px 0 0",
-                  color: "#94a3b8",
-                }}
-              >
-                Created: {formatDate(script.created_at)}
-              </p>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                flexWrap: "wrap",
-                alignItems: "flex-start",
-              }}
-            >
-              <CreateVideoButton scriptId={script.id} />
-              <UploadToYouTubeButton scriptId={script.id} />
-            </div>
-          </div>
-        </section>
-
-        <section
-          style={{
-            background: "#111827",
-            border: "1px solid #1f2937",
-            borderRadius: 24,
-            padding: 24,
-          }}
-        >
-          <h2
-            style={{
-              marginTop: 0,
-              marginBottom: 18,
-              fontSize: 24,
-            }}
-          >
-            Script Body
-          </h2>
-
-          <div
-            style={{
-              background: "#0f172a",
-              border: "1px solid #1e293b",
-              borderRadius: 18,
-              padding: 20,
-              whiteSpace: "pre-wrap",
-              lineHeight: 1.7,
-              color: "#e2e8f0",
-              fontSize: 15,
-            }}
-          >
-            {script.script_body || "No script body available."}
-          </div>
-        </section>
+        <h1 style={{ fontSize: 24 }}>{data.title}</h1>
+        <p style={{ opacity: 0.7 }}>A Magical Story</p>
       </div>
-    </main>
+
+      {/* STORY PAGE */}
+      <div
+        style={{
+          width: 500,
+          minHeight: 300,
+          background: "#111827",
+          borderRadius: 20,
+          padding: 24,
+          textAlign: "center",
+          fontSize: 18,
+          lineHeight: 1.7,
+        }}
+      >
+        {pages[pageIndex]}
+      </div>
+
+      {/* NAVIGATION */}
+      <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
+        <button
+          onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+        >
+          ⬅ Previous
+        </button>
+
+        <button
+          onClick={() =>
+            setPageIndex((p) => Math.min(pages.length - 1, p + 1))
+          }
+        >
+          Next ➡
+        </button>
+      </div>
+
+      {/* PAGE INDICATOR */}
+      <p style={{ marginTop: 10 }}>
+        Page {pageIndex + 1} / {pages.length}
+      </p>
+    </div>
   );
 }
