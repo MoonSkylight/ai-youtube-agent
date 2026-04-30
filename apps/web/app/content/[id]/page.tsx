@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import CreateVideoButtons from "../../../components/CreateVideoButtons";
-import UploadToYouTubeButton from "../../../components/UploadToYouTubeButton";
 
 type ScriptData = {
   id: string;
@@ -20,6 +18,8 @@ export default function ContentDetailPage({
   const [loading, setLoading] = useState(true);
   const [images, setImages] = useState<string[]>([]);
   const [message, setMessage] = useState("");
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
 
   useEffect(() => {
     async function loadScript() {
@@ -42,6 +42,83 @@ export default function ContentDetailPage({
 
     loadScript();
   }, [params]);
+
+  async function createVideo(mode: "adult" | "kids") {
+    if (!script?.id) return;
+
+    setVideoLoading(true);
+    setMessage("");
+
+    try {
+      const res = await fetch("/api/render-video", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          scriptId: script.id,
+          mode,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        setMessage(data.error || "Failed to create video");
+        return;
+      }
+
+      if (data.images) {
+        setImages(data.images);
+      }
+
+      if (data.videoUrl) {
+        window.open(data.videoUrl, "_blank");
+      }
+
+      setMessage("Video created successfully");
+    } catch (error: any) {
+      setMessage(error.message || "Failed to create video");
+    } finally {
+      setVideoLoading(false);
+    }
+  }
+
+  async function uploadToYouTube() {
+    if (!script?.id) return;
+
+    setUploadLoading(true);
+    setMessage("");
+
+    try {
+      const res = await fetch("/api/upload-to-youtube", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          scriptId: script.id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        setMessage(data.error || "Upload failed");
+        return;
+      }
+
+      if (data.youtubeUrl) {
+        window.open(data.youtubeUrl, "_blank");
+      }
+
+      setMessage("Upload completed");
+    } catch (error: any) {
+      setMessage(error.message || "Upload failed");
+    } finally {
+      setUploadLoading(false);
+    }
+  }
 
   async function handleGenerateScenes(mode: "adult" | "kids") {
     if (!script?.id) return;
@@ -163,14 +240,62 @@ export default function ContentDetailPage({
               alignItems: "center",
             }}
           >
-            <CreateVideoButtons scriptId={script.id} />
-            <UploadToYouTubeButton scriptId={script.id} />
+            <button
+              type="button"
+              onClick={() => createVideo("adult")}
+              disabled={videoLoading}
+              style={{
+                background: "#7c3aed",
+                color: "#fff",
+                padding: "12px 16px",
+                borderRadius: 12,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              {videoLoading ? "Creating..." : "Create Adult Video"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => createVideo("kids")}
+              disabled={videoLoading}
+              style={{
+                background: "#22c55e",
+                color: "#fff",
+                padding: "12px 16px",
+                borderRadius: 12,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              {videoLoading ? "Creating..." : "Create Kids Video"}
+            </button>
+
+            <button
+              type="button"
+              onClick={uploadToYouTube}
+              disabled={uploadLoading}
+              style={{
+                background: "#2563eb",
+                color: "#fff",
+                padding: "12px 16px",
+                borderRadius: 12,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              {uploadLoading ? "Uploading..." : "Upload to YouTube"}
+            </button>
 
             <button
               type="button"
               onClick={() => handleGenerateScenes("adult")}
               style={{
-                background: "#7c3aed",
+                background: "#9333ea",
                 color: "#fff",
                 padding: "12px 16px",
                 borderRadius: 12,
@@ -186,7 +311,7 @@ export default function ContentDetailPage({
               type="button"
               onClick={() => handleGenerateScenes("kids")}
               style={{
-                background: "#22c55e",
+                background: "#16a34a",
                 color: "#fff",
                 padding: "12px 16px",
                 borderRadius: 12,
