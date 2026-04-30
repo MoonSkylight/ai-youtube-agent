@@ -18,14 +18,26 @@ export default function ContentDetailPage({
   const [images, setImages] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [videoLoading, setVideoLoading] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [videoUrl, setVideoUrl] = useState("");
 
   useEffect(() => {
     async function loadScript() {
-      const resolvedParams = await params;
-      const res = await fetch(`/api/get-script?id=${resolvedParams.id}`);
-      const data = await res.json();
-      setScript(data);
-      setLoading(false);
+      try {
+        const resolvedParams = await params;
+        const res = await fetch(`/api/get-script?id=${resolvedParams.id}`);
+        const data = await res.json();
+
+        if (data?.id) {
+          setScript(data);
+        } else {
+          setMessage("Script not found");
+        }
+      } catch (error: any) {
+        setMessage(error.message || "Failed to load script");
+      } finally {
+        setLoading(false);
+      }
     }
 
     loadScript();
@@ -43,7 +55,10 @@ export default function ContentDetailPage({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ scriptId: script.id, mode }),
+        body: JSON.stringify({
+          scriptId: script.id,
+          mode,
+        }),
       });
 
       const data = await res.json();
@@ -53,17 +68,18 @@ export default function ContentDetailPage({
         return;
       }
 
-      if (data.videoUrl) {
-        window.open(data.videoUrl, "_blank");
-      }
-
       if (data.images) {
         setImages(data.images);
       }
 
-      setMessage("Done successfully");
+      if (data.videoUrl) {
+        setVideoUrl(data.videoUrl);
+        window.open(data.videoUrl, "_blank");
+      }
+
+      setMessage("Video created successfully");
     } catch (error: any) {
-      setMessage(error.message || "Something went wrong");
+      setMessage(error.message || "Failed to create video");
     } finally {
       setVideoLoading(false);
     }
@@ -72,7 +88,13 @@ export default function ContentDetailPage({
   async function uploadToYouTube() {
     if (!script) return;
 
-    setMessage("Uploading...");
+    if (!videoUrl) {
+      setMessage("Create a video first before uploading to YouTube");
+      return;
+    }
+
+    setUploadLoading(true);
+    setMessage("");
 
     try {
       const res = await fetch("/api/upload-to-youtube", {
@@ -80,7 +102,10 @@ export default function ContentDetailPage({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ scriptId: script.id }),
+        body: JSON.stringify({
+          scriptId: script.id,
+          videoUrl,
+        }),
       });
 
       const data = await res.json();
@@ -94,9 +119,45 @@ export default function ContentDetailPage({
         window.open(data.youtubeUrl, "_blank");
       }
 
-      setMessage("Upload complete");
+      setMessage("Upload completed successfully");
     } catch (error: any) {
       setMessage(error.message || "Upload failed");
+    } finally {
+      setUploadLoading(false);
+    }
+  }
+
+  async function handleGenerateScenes(mode: "adult" | "kids") {
+    if (!script?.id) return;
+
+    setMessage("Generating scenes...");
+
+    try {
+      const res = await fetch("/api/render-video", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          scriptId: script.id,
+          mode,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        setMessage(data.error || "Failed to generate scenes");
+        return;
+      }
+
+      setImages(data.images || []);
+      if (data.videoUrl) {
+        setVideoUrl(data.videoUrl);
+      }
+      setMessage("Scenes generated successfully");
+    } catch (error: any) {
+      setMessage(error.message || "Failed to generate scenes");
     }
   }
 
@@ -111,6 +172,21 @@ export default function ContentDetailPage({
         }}
       >
         Loading...
+      </div>
+    );
+  }
+
+  if (!script) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#0b1020",
+          color: "#fff",
+          padding: 40,
+        }}
+      >
+        {message || "Script not found"}
       </div>
     );
   }
@@ -137,9 +213,8 @@ export default function ContentDetailPage({
           ← Back to Dashboard
         </a>
 
-        <h1 style={{ marginTop: 0, marginBottom: 16 }}>{script?.title}</h1>
+        <h1 style={{ marginTop: 0, marginBottom: 16 }}>{script.title}</h1>
 
-        {/* STICKY ACTION BAR */}
         <div
           style={{
             position: "sticky",
@@ -199,6 +274,7 @@ export default function ContentDetailPage({
             <button
               type="button"
               onClick={uploadToYouTube}
+              disabled={uploadLoading || !videoUrl}
               style={{
                 background: "#2563eb",
                 color: "#fff",
@@ -207,14 +283,15 @@ export default function ContentDetailPage({
                 border: "none",
                 cursor: "pointer",
                 fontWeight: 600,
+                opacity: videoUrl ? 1 : 0.6,
               }}
             >
-              📤 Upload to YouTube
+              {uploadLoading ? "Uploading..." : "📤 Upload to YouTube"}
             </button>
 
             <button
               type="button"
-              onClick={() => createVideo("adult")}
+              onClick={() => handleGenerateScenes("adult")}
               style={{
                 background: "#9333ea",
                 color: "#fff",
@@ -230,7 +307,7 @@ export default function ContentDetailPage({
 
             <button
               type="button"
-              onClick={() => createVideo("kids")}
+              onClick={() => handleGenerateScenes("kids")}
               style={{
                 background: "#16a34a",
                 color: "#fff",
@@ -244,6 +321,19 @@ export default function ContentDetailPage({
               🎨 Generate Kids Scenes
             </button>
           </div>
+
+          {videoUrl ? (
+            <p
+              style={{
+                marginTop: 12,
+                marginBottom: 0,
+                color: "#86efac",
+                fontSize: 14,
+              }}
+            >
+              Video ready for upload
+            </p>
+          ) : null}
 
           {message ? (
             <p
@@ -259,7 +349,6 @@ export default function ContentDetailPage({
           ) : null}
         </div>
 
-        {/* SCRIPT */}
         <div
           style={{
             background: "#111827",
@@ -271,10 +360,9 @@ export default function ContentDetailPage({
             boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
           }}
         >
-          {script?.script_body}
+          {script.script_body}
         </div>
 
-        {/* IMAGES */}
         {images.length > 0 && (
           <div
             style={{
