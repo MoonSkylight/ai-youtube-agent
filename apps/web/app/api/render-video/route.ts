@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import axios from "axios";
 import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: NextRequest) {
@@ -35,23 +36,29 @@ export async function POST(req: NextRequest) {
 
     const script = data.script_body || "";
 
-    let style = "";
+    // 🎬 STEP 1: Split into scenes
+    const scenes = script.split("\n").filter((s: string) => s.trim().length > 0);
 
-    if (mode === "kids") {
-      style =
-        "cartoon colorful kids animation, toys, fruits, playful, soft lighting";
-    } else {
-      style =
-        "realistic cinematic, 3D animation, paper craft, sand motion, dramatic lighting";
-    }
+    // 🎨 STEP 2: Generate images
+    const images = scenes.slice(0, 5).map((scene: string, i: number) => {
+      const style =
+        mode === "kids"
+          ? "cartoon kids animation colorful toys"
+          : "cinematic realistic 3d animation";
 
-    const image = `https://dummyimage.com/1280x720/000/fff&text=${encodeURIComponent(
-      style + " " + script.slice(0, 80)
-    )}`;
+      return `https://dummyimage.com/1280x720/000/fff&text=${encodeURIComponent(
+        style + " " + scene.slice(0, 50)
+      )}`;
+    });
+
+    // 🎥 STEP 3: Use external video generator (mock real pipeline)
+    const videoUrl =
+      "https://www.w3schools.com/html/mov_bbb.mp4";
 
     return NextResponse.json({
       ok: true,
-      videoUrl: image,
+      images,
+      videoUrl,
     });
   } catch (err: any) {
     return NextResponse.json(
