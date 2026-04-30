@@ -2,6 +2,34 @@
 
 import { useState, useEffect } from "react";
 
+function splitIntoPages(text: string) {
+  const paragraphs = text
+    .split("\n")
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const pages: string[] = [];
+  let current = "";
+
+  paragraphs.forEach((p) => {
+    if ((current + " " + p).length > 500) {
+      pages.push(current);
+      current = p;
+    } else {
+      current = current ? current + " " + p : p;
+    }
+  });
+
+  if (current) pages.push(current);
+
+  return pages;
+}
+
+function generateImage(text: string) {
+  const encoded = encodeURIComponent(text.slice(0, 120));
+  return `https://dummyimage.com/800x500/1e293b/ffffff&text=${encoded}`;
+}
+
 export default function Page({ params }: any) {
   const [data, setData] = useState<any>(null);
   const [pageIndex, setPageIndex] = useState(0);
@@ -17,10 +45,10 @@ export default function Page({ params }: any) {
 
   if (!data) return <div style={{ padding: 40 }}>Loading...</div>;
 
-  // Split script into "pages"
-  const pages = (data.script_body || "")
-    .split("\n")
-    .filter((p: string) => p.trim().length > 0);
+  const pages = splitIntoPages(data.script_body || "");
+
+  const currentText = pages[pageIndex];
+  const imageUrl = generateImage(currentText);
 
   return (
     <div
@@ -51,24 +79,32 @@ export default function Page({ params }: any) {
         <p style={{ opacity: 0.7 }}>A Magical Story</p>
       </div>
 
-      {/* STORY PAGE */}
+      {/* STORYBOOK PAGE */}
       <div
         style={{
-          width: 500,
-          minHeight: 300,
-          background: "#111827",
+          width: 700,
+          background: "#f8fafc",
+          color: "#111",
           borderRadius: 20,
-          padding: 24,
-          textAlign: "center",
-          fontSize: 18,
-          lineHeight: 1.7,
+          overflow: "hidden",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
         }}
       >
-        {pages[pageIndex]}
+        {/* IMAGE */}
+        <img
+          src={imageUrl}
+          alt="Story Illustration"
+          style={{ width: "100%", height: 300, objectFit: "cover" }}
+        />
+
+        {/* TEXT */}
+        <div style={{ padding: 24, fontSize: 18, lineHeight: 1.7 }}>
+          {currentText}
+        </div>
       </div>
 
       {/* NAVIGATION */}
-      <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
+      <div style={{ marginTop: 20, display: "flex", gap: 12 }}>
         <button
           onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
         >
@@ -84,7 +120,6 @@ export default function Page({ params }: any) {
         </button>
       </div>
 
-      {/* PAGE INDICATOR */}
       <p style={{ marginTop: 10 }}>
         Page {pageIndex + 1} / {pages.length}
       </p>
