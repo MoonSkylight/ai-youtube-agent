@@ -2,11 +2,15 @@
 
 import { useState } from "react";
 
-export default function CreateVideoButton({ scriptId }: { scriptId: string }) {
+export default function CreateVideoButtons({
+  scriptId,
+}: {
+  scriptId: string;
+}) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function handleClick() {
+  async function createVideo(mode: "adult" | "kids") {
     setLoading(true);
     setMessage("");
 
@@ -16,49 +20,56 @@ export default function CreateVideoButton({ scriptId }: { scriptId: string }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ scriptId }),
+        body: JSON.stringify({
+          scriptId,
+          mode,
+        }),
       });
 
       const data = await res.json();
 
-      if (!res.ok || !data.ok) {
-        setMessage(data.error || "Render failed");
+      if (!data.ok) {
+        setMessage(data.error || "Failed");
         return;
       }
 
-      setMessage("Video ready");
-
-      if (data.videoUrl) {
-        window.open(data.videoUrl, "_blank");
-      }
-    } catch (error: any) {
-      setMessage(error.message || "Render failed");
+      window.open(data.videoUrl, "_blank");
+    } catch (err: any) {
+      setMessage(err.message || "Error");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div style={{ marginTop: 16 }}>
+    <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
       <button
-        type="button"
-        onClick={handleClick}
+        onClick={() => createVideo("adult")}
         disabled={loading}
         style={{
-          padding: "10px 16px",
-          borderRadius: 8,
-          border: "1px solid #ccc",
-          background: "#111",
+          background: "#7c3aed",
           color: "#fff",
-          cursor: "pointer",
+          padding: "12px 16px",
+          borderRadius: 12,
         }}
       >
-        {loading ? "Rendering..." : "Create Video"}
+        🎬 Create Adult Video
       </button>
 
-      {message ? (
-        <p style={{ marginTop: 12, color: "red" }}>{message}</p>
-      ) : null}
+      <button
+        onClick={() => createVideo("kids")}
+        disabled={loading}
+        style={{
+          background: "#22c55e",
+          color: "#fff",
+          padding: "12px 16px",
+          borderRadius: 12,
+        }}
+      >
+        🧸 Create Kids Video
+      </button>
+
+      {message && <p>{message}</p>}
     </div>
   );
 }

@@ -4,11 +4,13 @@ import { createClient } from "@supabase/supabase-js";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
+
     const scriptId = String(body.scriptId || "").trim();
+    const mode = String(body.mode || "adult");
 
     if (!scriptId) {
       return NextResponse.json(
-        { ok: false, error: "scriptId is required" },
+        { ok: false, error: "scriptId required" },
         { status: 400 }
       );
     }
@@ -18,31 +20,38 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("scripts")
-      .select("title, script_body")
+      .select("*")
       .eq("id", scriptId)
       .single();
 
-    if (error || !data) {
+    if (!data) {
       return NextResponse.json(
         { ok: false, error: "Script not found" },
         { status: 404 }
       );
     }
 
-    const text = encodeURIComponent(data.script_body || "");
+    const script = data.script_body || "";
 
-    // Simple generated "video" using text render service
-    const videoUrl = `https://dummyimage.com/1280x720/000/fff&text=${text.slice(
-      0,
-      200
+    let style = "";
+
+    if (mode === "kids") {
+      style =
+        "cartoon colorful kids animation, toys, fruits, playful, soft lighting";
+    } else {
+      style =
+        "realistic cinematic, 3D animation, paper craft, sand motion, dramatic lighting";
+    }
+
+    const image = `https://dummyimage.com/1280x720/000/fff&text=${encodeURIComponent(
+      style + " " + script.slice(0, 80)
     )}`;
 
     return NextResponse.json({
       ok: true,
-      title: data.title,
-      videoUrl,
+      videoUrl: image,
     });
   } catch (err: any) {
     return NextResponse.json(
