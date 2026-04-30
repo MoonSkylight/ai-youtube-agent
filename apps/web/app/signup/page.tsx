@@ -1,4 +1,49 @@
-import Link from "next/link";
+"use client";
+
+import { useState } from "react";
+
 export default function SignupPage() {
-  return <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6"><div className="rounded-2xl border p-8 shadow-sm"><h1 className="text-3xl font-bold">Create account</h1><p className="mt-2 text-sm text-neutral-500">Start building your connected AI operating system.</p><form action="/api/auth/signup" method="post" className="mt-6 space-y-4"><div><label className="mb-1 block text-sm font-medium">Email</label><input name="email" type="email" required className="w-full rounded-xl border px-4 py-3" /></div><div><label className="mb-1 block text-sm font-medium">Password</label><input name="password" type="password" required className="w-full rounded-xl border px-4 py-3" /></div><button className="w-full rounded-xl border px-4 py-3 font-medium">Create account</button></form><p className="mt-4 text-sm text-neutral-500">Already have an account? <Link href="/login" className="underline">Log in</Link></p></div></main>;
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  async function handleSignup() {
+    const res = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+
+    if (data.ok) {
+      alert("Account created. Now login.");
+      window.location.href = "/login";
+    } else {
+      alert(data.error);
+    }
+  }
+
+  return (
+    <div style={{ padding: 40, maxWidth: 400, margin: "auto" }}>
+      <h1>Create Account</h1>
+
+      <div style={{ display: "grid", gap: 12 }}>
+        <input
+          type="email"
+          placeholder="Email"
+          onChange={(e) => setEmail(e.target.value)}
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        <button onClick={handleSignup}>Sign Up</button>
+      </div>
+    </div>
+  );
 }
