@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import CreateVideoButtons from "@/components/CreateVideoButtons";
-import UploadToYouTubeButton from "@/components/UploadToYouTubeButton";
+import CreateVideoButtons from "../../../components/CreateVideoButtons";
+import UploadToYouTubeButton from "../../../components/UploadToYouTubeButton";
 
 type ScriptData = {
   id: string;
