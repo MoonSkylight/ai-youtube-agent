@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       !process.env.YOUTUBE_REFRESH_TOKEN
     ) {
       return NextResponse.json(
-        { ok: false, error: "YouTube environment variables are missing" },
+        { ok: false, error: "YouTube env variables missing" },
         { status: 500 }
       );
     }
@@ -52,29 +52,36 @@ export async function POST(req: NextRequest) {
       auth: oauth2Client,
     });
 
-    const downloaded = await fetch(videoUrl);
+    // Download video from your render step
+    const response = await fetch(videoUrl);
 
-    if (!downloaded.ok) {
+    if (!response.ok) {
       return NextResponse.json(
-        { ok: false, error: "Failed to download video from videoUrl" },
+        { ok: false, error: "Failed to fetch video" },
         { status: 400 }
       );
     }
 
-    const buffer = Buffer.from(await downloaded.arrayBuffer());
+    const buffer = Buffer.from(await response.arrayBuffer());
     const stream = Readable.from(buffer);
 
     const upload = await youtube.videos.insert({
       part: ["snippet", "status"],
       requestBody: {
         snippet: {
-          title: title.slice(0, 100),
+          title: `${title} | AI Story`,
           description: description.slice(0, 4000),
-          tags: ["AI", "video", "story"],
+          tags: [
+            "AI video",
+            "AI story",
+            "kids story",
+            "animation",
+            "automated video",
+          ],
           categoryId: "22",
         },
         status: {
-          privacyStatus: "private",
+          privacyStatus: "public", // ✅ PUBLIC VIDEO
         },
       },
       media: {
