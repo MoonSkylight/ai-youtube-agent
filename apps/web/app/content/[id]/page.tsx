@@ -89,7 +89,7 @@ export default function ContentDetailPage({
     if (!script) return;
 
     if (!videoUrl) {
-      setMessage("Create a video first before uploading to YouTube");
+      setMessage("Create a video first before uploading");
       return;
     }
 
@@ -105,6 +105,8 @@ export default function ContentDetailPage({
         body: JSON.stringify({
           scriptId: script.id,
           videoUrl,
+          title: script.title,
+          description: script.script_body,
         }),
       });
 
@@ -127,79 +129,16 @@ export default function ContentDetailPage({
     }
   }
 
-  async function handleGenerateScenes(mode: "adult" | "kids") {
-    if (!script?.id) return;
-
-    setMessage("Generating scenes...");
-
-    try {
-      const res = await fetch("/api/render-video", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          scriptId: script.id,
-          mode,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.ok) {
-        setMessage(data.error || "Failed to generate scenes");
-        return;
-      }
-
-      setImages(data.images || []);
-      if (data.videoUrl) {
-        setVideoUrl(data.videoUrl);
-      }
-      setMessage("Scenes generated successfully");
-    } catch (error: any) {
-      setMessage(error.message || "Failed to generate scenes");
-    }
-  }
-
   if (loading) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "#0b1020",
-          color: "#fff",
-          padding: 40,
-        }}
-      >
-        Loading...
-      </div>
-    );
+    return <div style={{ minHeight: "100vh", background: "#0b1020", color: "#fff", padding: 40 }}>Loading...</div>;
   }
 
   if (!script) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "#0b1020",
-          color: "#fff",
-          padding: 40,
-        }}
-      >
-        {message || "Script not found"}
-      </div>
-    );
+    return <div style={{ minHeight: "100vh", background: "#0b1020", color: "#fff", padding: 40 }}>{message || "Script not found"}</div>;
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#0b1020",
-        color: "#fff",
-        padding: 40,
-      }}
-    >
+    <div style={{ minHeight: "100vh", background: "#0b1020", color: "#fff", padding: 40 }}>
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
         <a
           href="/content"
@@ -229,14 +168,7 @@ export default function ContentDetailPage({
             marginBottom: 24,
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
             <button
               type="button"
               onClick={() => createVideo("adult")}
@@ -288,62 +220,16 @@ export default function ContentDetailPage({
             >
               {uploadLoading ? "Uploading..." : "📤 Upload to YouTube"}
             </button>
-
-            <button
-              type="button"
-              onClick={() => handleGenerateScenes("adult")}
-              style={{
-                background: "#9333ea",
-                color: "#fff",
-                padding: "12px 16px",
-                borderRadius: 12,
-                border: "none",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
-            >
-              🎨 Generate Adult Scenes
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleGenerateScenes("kids")}
-              style={{
-                background: "#16a34a",
-                color: "#fff",
-                padding: "12px 16px",
-                borderRadius: 12,
-                border: "none",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
-            >
-              🎨 Generate Kids Scenes
-            </button>
           </div>
 
           {videoUrl ? (
-            <p
-              style={{
-                marginTop: 12,
-                marginBottom: 0,
-                color: "#86efac",
-                fontSize: 14,
-              }}
-            >
+            <p style={{ marginTop: 12, marginBottom: 0, color: "#86efac", fontSize: 14 }}>
               Video ready for upload
             </p>
           ) : null}
 
           {message ? (
-            <p
-              style={{
-                marginTop: 12,
-                marginBottom: 0,
-                color: "#93c5fd",
-                fontSize: 14,
-              }}
-            >
+            <p style={{ marginTop: 12, marginBottom: 0, color: "#93c5fd", fontSize: 14 }}>
               {message}
             </p>
           ) : null}
@@ -385,14 +271,9 @@ export default function ContentDetailPage({
                 <img
                   src={img}
                   alt={`Scene ${i + 1}`}
-                  style={{
-                    width: "100%",
-                    display: "block",
-                  }}
+                  style={{ width: "100%", display: "block" }}
                 />
-                <div style={{ padding: 12, color: "#cbd5e1" }}>
-                  Scene {i + 1}
-                </div>
+                <div style={{ padding: 12, color: "#cbd5e1" }}>Scene {i + 1}</div>
               </div>
             ))}
           </div>
