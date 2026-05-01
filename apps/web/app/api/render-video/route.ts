@@ -5,13 +5,13 @@ import { createClient } from "@supabase/supabase-js";
 import RunwayML, { TaskFailedError } from "@runwayml/sdk";
 
 function buildPrompt(script: string, mode: "adult" | "kids") {
-  const clean = script.replace(/\s+/g, " ").trim().slice(0, 900);
+  const clean = script.replace(/\s+/g, " ").trim().slice(0, 500);
 
   if (mode === "kids") {
-    return `Create a bright, child-friendly animated story video. Style: colorful cartoon, playful, gentle motion, expressive characters, clean backgrounds, wholesome tone. Story: ${clean}`;
+    return `cartoon colorful kids animation ${clean}`;
   }
 
-  return `Create a cinematic story video. Style: realistic or stylized 3D, polished lighting, dramatic composition, smooth camera motion, high detail. Story: ${clean}`;
+  return `cinematic realistic 3d animation ${clean}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -19,19 +19,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
 
     const scriptId = String(body.scriptId || "").trim();
-    const mode = String(body.mode || "adult").trim() as "adult" | "kids";
+    const mode = String(body.mode || "adult") as "adult" | "kids";
 
     if (!scriptId) {
       return NextResponse.json(
-        { ok: false, error: "scriptId is required" },
+        { ok: false, error: "scriptId required" },
         { status: 400 }
-      );
-    }
-
-    if (!process.env.RUNWAYML_API_SECRET) {
-      return NextResponse.json(
-        { ok: false, error: "RUNWAYML_API_SECRET is missing" },
-        { status: 500 }
       );
     }
 
@@ -40,29 +33,35 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("scripts")
-      .select("id, title, script_body")
+      .select("*")
       .eq("id", scriptId)
       .single();
 
-    if (error || !data) {
+    if (!data) {
       return NextResponse.json(
         { ok: false, error: "Script not found" },
         { status: 404 }
       );
     }
 
-    const promptText = buildPrompt(String(data.script_body || ""), mode);
+    const promptText = buildPrompt(data.script_body || "", mode);
 
     const runway = new RunwayML({
-      apiKey: process.env.RUNWAYML_API_SECRET,
+      apiKey: process.env.RUNWAYML_API_SECRET!,
     });
+
+    // 🔥 FIX: Provide image (required)
+    const promptImage = `https://dummyimage.com/1280x720/000/fff&text=${encodeURIComponent(
+      promptText
+    )}`;
 
     try {
       const task = await runway.imageToVideo
         .create({
           model: "gen4.5",
+          promptImage, // ✅ REQUIRED
           promptText,
           ratio: "1280:720",
           duration: 5,
@@ -76,35 +75,28 @@ export async function POST(req: NextRequest) {
 
       if (!videoUrl) {
         return NextResponse.json(
-          { ok: false, error: "Runway returned no video URL" },
+          { ok: false, error: "No video generated" },
           { status: 500 }
         );
       }
 
       return NextResponse.json({
         ok: true,
-        title: data.title || "Generated Video",
         videoUrl,
-        taskId: task.id,
-        images: [],
       });
     } catch (error) {
       if (error instanceof TaskFailedError) {
         return NextResponse.json(
-          {
-            ok: false,
-            error: "Runway task failed",
-            details: error.taskDetails,
-          },
+          { ok: false, error: "Runway task failed" },
           { status: 500 }
         );
       }
 
       throw error;
     }
-  } catch (error: any) {
+  } catch (err: any) {
     return NextResponse.json(
-      { ok: false, error: error?.message || "Render failed" },
+      { ok: false, error: err.message || "Render failed" },
       { status: 500 }
     );
   }
