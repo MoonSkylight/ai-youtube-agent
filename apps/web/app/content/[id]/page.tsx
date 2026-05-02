@@ -7,6 +7,9 @@ type ScriptData = {
   id: string;
   title: string;
   script_body: string;
+  video_url?: string | null;
+  youtube_url?: string | null;
+  publish_status?: string | null;
 };
 
 export default function ContentDetailPage({
@@ -33,6 +36,8 @@ export default function ContentDetailPage({
 
         if (data?.id) {
           setScript(data);
+          setVideoUrl(data.video_url || "");
+          setYoutubeUrl(data.youtube_url || "");
           setMessage("");
         } else {
           setMessageType("danger");
@@ -48,6 +53,21 @@ export default function ContentDetailPage({
 
     loadScript();
   }, [params]);
+
+  async function refreshScript() {
+    if (!script?.id) return;
+
+    try {
+      const res = await fetch(`/api/get-script?id=${script.id}`);
+      const data = await res.json();
+
+      if (data?.id) {
+        setScript(data);
+        setVideoUrl(data.video_url || "");
+        setYoutubeUrl(data.youtube_url || "");
+      }
+    } catch {}
+  }
 
   async function createVideo(mode: "adult" | "kids") {
     if (!script) return;
@@ -79,6 +99,8 @@ export default function ContentDetailPage({
       if (data.videoUrl) {
         setVideoUrl(data.videoUrl);
       }
+
+      await refreshScript();
 
       setMessageType("success");
       setMessage("Video created successfully.");
@@ -127,6 +149,8 @@ export default function ContentDetailPage({
         setYoutubeUrl(data.youtubeUrl);
       }
 
+      await refreshScript();
+
       setMessageType("success");
       setMessage("Upload completed successfully.");
     } catch (error: any) {
@@ -173,6 +197,8 @@ export default function ContentDetailPage({
       if (data.youtubeUrl) {
         setYoutubeUrl(data.youtubeUrl);
       }
+
+      await refreshScript();
 
       setMessageType("success");
       setMessage("One-click publish completed successfully.");
@@ -250,7 +276,7 @@ export default function ContentDetailPage({
             <div>
               <h2 className="card-title">Publishing Actions</h2>
               <p className="card-muted">
-                Choose a workflow for video generation and publishing.
+                Status: {script.publish_status || "draft"}
               </p>
             </div>
 
