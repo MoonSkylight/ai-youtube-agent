@@ -4,7 +4,16 @@ import { createClient } from "@supabase/supabase-js";
 type ScriptRow = {
   id: string;
   title: string;
+  publish_status: string | null;
+  youtube_url: string | null;
+  published_at: string | null;
 };
+
+function getStatusLabel(status: string | null) {
+  if (status === "published") return "Published";
+  if (status === "rendered") return "Rendered";
+  return "Draft";
+}
 
 export default async function ContentPage() {
   const supabase = createClient(
@@ -14,7 +23,7 @@ export default async function ContentPage() {
 
   const { data, error } = await supabase
     .from("scripts")
-    .select("id, title")
+    .select("id, title, publish_status, youtube_url, published_at")
     .order("created_at", { ascending: false });
 
   const scripts = (data ?? []) as ScriptRow[];
@@ -26,7 +35,7 @@ export default async function ContentPage() {
           <span className="badge-top">AI YouTube Agent</span>
           <h1 className="page-title">Content Dashboard</h1>
           <p className="page-subtitle">
-            Review scripts and open each workflow.
+            Review scripts, publishing state, and YouTube output.
           </p>
         </div>
 
@@ -45,13 +54,17 @@ export default async function ContentPage() {
           </div>
 
           <div className="stat card">
-            <div className="stat-label">Dashboard</div>
-            <div className="stat-value">Ready</div>
+            <div className="stat-label">Published</div>
+            <div className="stat-value">
+              {scripts.filter((s) => s.publish_status === "published").length}
+            </div>
           </div>
 
           <div className="stat card">
-            <div className="stat-label">Workflow</div>
-            <div className="stat-value">Live</div>
+            <div className="stat-label">Drafts</div>
+            <div className="stat-value">
+              {scripts.filter((s) => s.publish_status !== "published").length}
+            </div>
           </div>
         </div>
 
@@ -60,7 +73,7 @@ export default async function ContentPage() {
             <div>
               <h2 className="card-title">All Scripts</h2>
               <p className="card-muted">
-                Open a script to create video or upload to YouTube.
+                Open a script, render a video, or jump to YouTube.
               </p>
             </div>
 
@@ -71,18 +84,39 @@ export default async function ContentPage() {
             ) : (
               <div className="list">
                 {scripts.map((script, index) => (
-                  <Link
-                    key={script.id}
-                    href={`/content/${script.id}`}
-                    className="script-item"
-                  >
+                  <div key={script.id} className="script-item">
                     <h3 className="script-title">
                       {script.title || "Untitled Script"}
                     </h3>
+
                     <div className="script-meta">
-                      Script #{index + 1} • Open details
+                      Script #{index + 1} • Status:{" "}
+                      {getStatusLabel(script.publish_status)}
                     </div>
-                  </Link>
+
+                    <div
+                      className="actions"
+                      style={{ marginTop: 12 }}
+                    >
+                      <Link
+                        href={`/content/${script.id}`}
+                        className="btn btn-primary"
+                      >
+                        Open
+                      </Link>
+
+                      {script.youtube_url ? (
+                        <a
+                          href={script.youtube_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-success"
+                        >
+                          Watch on YouTube
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
