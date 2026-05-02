@@ -6,13 +6,19 @@ type ScriptRow = {
   title: string;
   publish_status: string | null;
   youtube_url: string | null;
-  published_at: string | null;
+  video_url: string | null;
 };
 
 function getStatusLabel(status: string | null) {
   if (status === "published") return "Published";
   if (status === "rendered") return "Rendered";
   return "Draft";
+}
+
+function getStatusClass(status: string | null) {
+  if (status === "published") return "status-published";
+  if (status === "rendered") return "status-rendered";
+  return "status-draft";
 }
 
 export default async function ContentPage() {
@@ -23,112 +29,204 @@ export default async function ContentPage() {
 
   const { data, error } = await supabase
     .from("scripts")
-    .select("id, title, publish_status, youtube_url, published_at")
+    .select("id, title, publish_status, youtube_url, video_url, created_at")
     .order("created_at", { ascending: false });
 
   const scripts = (data ?? []) as ScriptRow[];
+  const publishedCount = scripts.filter(
+    (item) => item.publish_status === "published"
+  ).length;
+  const renderedCount = scripts.filter(
+    (item) => item.publish_status === "rendered"
+  ).length;
+  const draftCount = scripts.filter(
+    (item) => !item.publish_status || item.publish_status === "draft"
+  ).length;
 
   return (
-    <main className="app-shell">
-      <div className="topbar">
-        <div className="brand">
-          <span className="badge-top">AI YouTube Agent</span>
-          <h1 className="page-title">Content Dashboard</h1>
-          <p className="page-subtitle">
-            Review scripts, publishing state, and YouTube output.
+    <main className="studio-shell">
+      <header className="studio-header">
+        <div className="hero-copy">
+          <div className="studio-kicker">AI YouTube Agent</div>
+          <h1 className="studio-title">Content command center</h1>
+          <p className="studio-subtitle">
+            Track scripts, monitor production status, and jump directly into
+            render or publish actions.
           </p>
         </div>
 
-        <div className="actions">
-          <Link href="/" className="btn btn-secondary">
-            Home
+        <div className="studio-header-actions">
+          <Link href="/" className="ui-btn ui-btn-secondary">
+            Back Home
+          </Link>
+          <Link href="/" className="ui-btn ui-btn-primary">
+            New Story
           </Link>
         </div>
-      </div>
+      </header>
 
-      <section className="grid">
-        <div className="stats">
-          <div className="stat card">
-            <div className="stat-label">Total Scripts</div>
-            <div className="stat-value">{scripts.length}</div>
-          </div>
-
-          <div className="stat card">
-            <div className="stat-label">Published</div>
-            <div className="stat-value">
-              {scripts.filter((s) => s.publish_status === "published").length}
-            </div>
-          </div>
-
-          <div className="stat card">
-            <div className="stat-label">Drafts</div>
-            <div className="stat-value">
-              {scripts.filter((s) => s.publish_status !== "published").length}
-            </div>
-          </div>
+      <section className="stats-strip">
+        <div className="metric-card">
+          <span>Total scripts</span>
+          <strong>{scripts.length}</strong>
         </div>
+        <div className="metric-card">
+          <span>Published</span>
+          <strong>{publishedCount}</strong>
+        </div>
+        <div className="metric-card">
+          <span>Rendered</span>
+          <strong>{renderedCount}</strong>
+        </div>
+        <div className="metric-card">
+          <span>Drafts</span>
+          <strong>{draftCount}</strong>
+        </div>
+      </section>
 
-        <div className="card">
-          <div className="card-body stack">
-            <div>
-              <h2 className="card-title">All Scripts</h2>
-              <p className="card-muted">
-                Open a script, render a video, or jump to YouTube.
+      <section className="studio-grid">
+        <div className="studio-main">
+          <div className="studio-card">
+            <div className="section-head">
+              <span className="section-label">Library</span>
+              <h2>Story projects</h2>
+              <p>
+                Open any project to generate video, upload to YouTube, or review
+                saved output.
               </p>
             </div>
 
             {error ? (
-              <div className="notice notice-danger">Failed to load scripts.</div>
+              <div className="notice notice-danger">
+                Failed to load scripts from Supabase.
+              </div>
             ) : scripts.length === 0 ? (
-              <div className="empty">No scripts found.</div>
+              <div className="empty">No scripts found yet.</div>
             ) : (
-              <div className="list">
+              <div className="project-list">
                 {scripts.map((script, index) => (
-                  <div key={script.id} className="script-item">
-                    <h3 className="script-title">
-                      {script.title || "Untitled Script"}
-                    </h3>
+                  <article key={script.id} className="project-card">
+                    <div className="project-top">
+                      <div>
+                        <div className="project-index">
+                          Project #{String(index + 1).padStart(2, "0")}
+                        </div>
+                        <h3 className="project-title">
+                          {script.title || "Untitled Script"}
+                        </h3>
+                      </div>
 
-                    <div className="script-meta">Script #{index + 1}</div>
-
-                    <div
-                      className={`status-badge ${
-                        script.publish_status === "published"
-                          ? "status-published"
-                          : script.publish_status === "rendered"
-                          ? "status-rendered"
-                          : "status-draft"
-                      }`}
-                      style={{ marginTop: 10 }}
-                    >
-                      {getStatusLabel(script.publish_status)}
+                      <div
+                        className={`status-badge ${getStatusClass(
+                          script.publish_status
+                        )}`}
+                      >
+                        {getStatusLabel(script.publish_status)}
+                      </div>
                     </div>
 
-                    <div className="actions" style={{ marginTop: 12 }}>
+                    <div className="project-links">
+                      <span>
+                        Video: {script.video_url ? "Generated" : "Not ready"}
+                      </span>
+                      <span>
+                        YouTube: {script.youtube_url ? "Published" : "Not published"}
+                      </span>
+                    </div>
+
+                    <div className="actions" style={{ marginTop: 14 }}>
                       <Link
                         href={`/content/${script.id}`}
-                        className="btn btn-primary"
+                        className="ui-btn ui-btn-primary"
                       >
-                        Open
+                        Open Workspace
                       </Link>
 
                       {script.youtube_url ? (
                         <a
                           href={script.youtube_url}
                           target="_blank"
-                          rel="noreferrer"
-                          className="btn btn-success"
+                          rel="noopener noreferrer"
+                          className="ui-btn ui-btn-secondary"
                         >
                           Watch on YouTube
                         </a>
                       ) : null}
+
+                      {script.video_url && !script.youtube_url ? (
+                        <a
+                          href={script.video_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ui-btn ui-btn-secondary"
+                        >
+                          Preview Video
+                        </a>
+                      ) : null}
                     </div>
-                  </div>
+                  </article>
                 ))}
               </div>
             )}
           </div>
         </div>
+
+        <aside className="studio-side">
+          <div className="studio-card">
+            <div className="section-head">
+              <span className="section-label">Pipeline</span>
+              <h2>Status overview</h2>
+            </div>
+
+            <div className="pipeline-list">
+              <div className="pipeline-item">
+                <span className="pipeline-dot">1</span>
+                <div>
+                  <strong>Draft queue</strong>
+                  <p>{draftCount} waiting for production</p>
+                </div>
+              </div>
+
+              <div className="pipeline-item">
+                <span className="pipeline-dot">2</span>
+                <div>
+                  <strong>Rendered videos</strong>
+                  <p>{renderedCount} ready for upload</p>
+                </div>
+              </div>
+
+              <div className="pipeline-item">
+                <span className="pipeline-dot">3</span>
+                <div>
+                  <strong>Published library</strong>
+                  <p>{publishedCount} live on YouTube</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="studio-card">
+            <div className="section-head">
+              <span className="section-label">Guidance</span>
+              <h2>Recommended flow</h2>
+            </div>
+
+            <div className="summary-list">
+              <div>
+                <span>1</span>
+                <strong>Open a script workspace</strong>
+              </div>
+              <div>
+                <span>2</span>
+                <strong>Generate the video render</strong>
+              </div>
+              <div>
+                <span>3</span>
+                <strong>Upload or one-click publish</strong>
+              </div>
+            </div>
+          </div>
+        </aside>
       </section>
     </main>
   );

@@ -12,6 +12,12 @@ type ScriptData = {
   publish_status?: string | null;
 };
 
+function getStatusClass(status: string | null | undefined) {
+  if (status === "published") return "status-published";
+  if (status === "rendered") return "status-rendered";
+  return "status-draft";
+}
+
 export default function ContentDetailPage({
   params,
 }: {
@@ -101,7 +107,6 @@ export default function ContentDetailPage({
       }
 
       await refreshScript();
-
       setMessageType("success");
       setMessage("Video created successfully.");
     } catch (error: any) {
@@ -150,7 +155,6 @@ export default function ContentDetailPage({
       }
 
       await refreshScript();
-
       setMessageType("success");
       setMessage("Upload completed successfully.");
     } catch (error: any) {
@@ -199,7 +203,6 @@ export default function ContentDetailPage({
       }
 
       await refreshScript();
-
       setMessageType("success");
       setMessage("One-click publish completed successfully.");
     } catch (error: any) {
@@ -212,11 +215,9 @@ export default function ContentDetailPage({
 
   if (loading) {
     return (
-      <main className="app-shell">
-        <div className="card">
-          <div className="card-body">
-            <div className="notice notice-info">Loading script...</div>
-          </div>
+      <main className="studio-shell">
+        <div className="studio-card">
+          <div className="notice notice-info">Loading workspace...</div>
         </div>
       </main>
     );
@@ -224,11 +225,11 @@ export default function ContentDetailPage({
 
   if (!script) {
     return (
-      <main className="app-shell">
-        <div className="card">
-          <div className="card-body stack">
-            <Link href="/content" className="btn btn-secondary">
-              ← Back to Dashboard
+      <main className="studio-shell">
+        <div className="studio-card">
+          <div className="stack">
+            <Link href="/content" className="ui-btn ui-btn-secondary">
+              Back to Dashboard
             </Link>
             <div className="notice notice-danger">
               {message || "Script not found."}
@@ -240,94 +241,95 @@ export default function ContentDetailPage({
   }
 
   return (
-    <main className="app-shell">
-      <div className="topbar">
-        <div className="brand">
-          <span className="badge-top">AI YouTube Agent</span>
-          <h1 className="page-title">{script.title}</h1>
-          <p className="page-subtitle">
-            Generate, review, and publish this script.
+    <main className="studio-shell">
+      <header className="studio-header">
+        <div className="hero-copy">
+          <div className="studio-kicker">Project Workspace</div>
+          <h1 className="studio-title">{script.title}</h1>
+          <p className="studio-subtitle">
+            Review the script, render video output, and publish directly to
+            YouTube.
           </p>
         </div>
 
-        <div className="actions">
-          <Link href="/content" className="btn btn-secondary">
-            ← Back
+        <div className="studio-header-actions">
+          <div className={`status-badge ${getStatusClass(script.publish_status)}`}>
+            {(script.publish_status || "draft").toUpperCase()}
+          </div>
+
+          <Link href="/content" className="ui-btn ui-btn-secondary">
+            Back to Dashboard
           </Link>
         </div>
-      </div>
+      </header>
 
-      <section className="grid grid-2">
-        <div className="card">
-          <div className="card-body stack">
-            <div>
-              <h2 className="card-title">Script Content</h2>
-              <p className="card-muted">
-                Review the script before generating the video.
-              </p>
+      <section className="studio-grid">
+        <div className="studio-main">
+          <div className="studio-card">
+            <div className="section-head">
+              <span className="section-label">Script</span>
+              <h2>Story content</h2>
+              <p>Review the saved script before generating or publishing.</p>
             </div>
 
             <textarea value={script.script_body || ""} readOnly />
           </div>
         </div>
 
-        <div className="card">
-          <div className="card-body stack">
-            <div>
-              <h2 className="card-title">Publishing Actions</h2>
-              <div
-                className={`status-badge ${
-                  script.publish_status === "published"
-                    ? "status-published"
-                    : script.publish_status === "rendered"
-                    ? "status-rendered"
-                    : "status-draft"
-                }`}
-              >
-                {(script.publish_status || "draft").toUpperCase()}
-              </div>
+        <aside className="studio-side">
+          <div className="studio-card">
+            <div className="section-head">
+              <span className="section-label">Actions</span>
+              <h2>Production controls</h2>
             </div>
 
-            <div className="actions">
+            <div className="stack">
               <button
-                className="btn btn-danger"
+                className="ui-btn btn-danger"
                 onClick={() => oneClickPublish("adult")}
                 disabled={working}
               >
-                {working ? "Working..." : "🚀 One-Click Adult Publish"}
+                {working ? "Working..." : "One-Click Adult Publish"}
               </button>
 
               <button
-                className="btn btn-warning"
+                className="ui-btn btn-warning"
                 onClick={() => oneClickPublish("kids")}
                 disabled={working}
               >
-                {working ? "Working..." : "🧸 One-Click Kids Publish"}
+                {working ? "Working..." : "One-Click Kids Publish"}
               </button>
 
               <button
-                className="btn btn-primary"
+                className="ui-btn ui-btn-primary"
                 onClick={() => createVideo("adult")}
                 disabled={working}
               >
-                🎬 Create Adult Video
+                Create Adult Video
               </button>
 
               <button
-                className="btn btn-success"
+                className="ui-btn btn-success"
                 onClick={() => createVideo("kids")}
                 disabled={working}
               >
-                🧸 Create Kids Video
+                Create Kids Video
               </button>
 
               <button
-                className="btn btn-secondary"
+                className="ui-btn ui-btn-secondary"
                 onClick={uploadToYouTube}
                 disabled={working}
               >
-                📤 Upload to YouTube
+                Upload to YouTube
               </button>
+            </div>
+          </div>
+
+          <div className="studio-card">
+            <div className="section-head">
+              <span className="section-label">Status</span>
+              <h2>Project output</h2>
             </div>
 
             {message ? (
@@ -344,37 +346,46 @@ export default function ContentDetailPage({
               >
                 {message}
               </div>
-            ) : null}
+            ) : (
+              <div className="notice notice-info">
+                No active task. Choose a production action to continue.
+              </div>
+            )}
+
+            <div className="summary-list" style={{ marginTop: 16 }}>
+              <div>
+                <span>Generated video</span>
+                <strong>{videoUrl ? "Available" : "Waiting"}</strong>
+              </div>
+              <div>
+                <span>YouTube link</span>
+                <strong>{youtubeUrl ? "Published" : "Waiting"}</strong>
+              </div>
+            </div>
 
             {videoUrl ? (
-              <div className="notice notice-success">
-                Video ready:{" "}
-                <a
-                  href={videoUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="link-text"
-                >
-                  Open generated video
-                </a>
-              </div>
+              <a
+                href={videoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="output-link"
+              >
+                Open generated video
+              </a>
             ) : null}
 
             {youtubeUrl ? (
-              <div className="notice notice-success">
-                YouTube published:{" "}
-                <a
-                  href={youtubeUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="link-text"
-                >
-                  Open YouTube video
-                </a>
-              </div>
+              <a
+                href={youtubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="output-link"
+              >
+                Open YouTube video
+              </a>
             ) : null}
           </div>
-        </div>
+        </aside>
       </section>
     </main>
   );
