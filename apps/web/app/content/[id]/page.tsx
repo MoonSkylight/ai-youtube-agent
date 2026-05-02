@@ -179,6 +179,22 @@ export default function ContentDetailPage({
     }
   }
 
+  function getButtonLabel(action: ActionKey, defaultLabel: string) {
+    if (videoLoading && selectedAction === action) {
+      return "Working...";
+    }
+
+    if (selectedAction === action) {
+      return "✅ Done";
+    }
+
+    return defaultLabel;
+  }
+
+  function getButtonColor(action: ActionKey, defaultColor: string) {
+    return selectedAction === action ? "#16a34a" : defaultColor;
+  }
+
   if (loading) {
     return (
       <div
@@ -253,8 +269,7 @@ export default function ContentDetailPage({
               onClick={() => oneClickPublish("adult")}
               disabled={videoLoading}
               style={{
-                background:
-                  selectedAction === "adult-publish" ? "#16a34a" : "#dc2626",
+                background: getButtonColor("adult-publish", "#dc2626"),
                 color: "#fff",
                 padding: "12px 16px",
                 borderRadius: 12,
@@ -263,7 +278,7 @@ export default function ContentDetailPage({
                 fontWeight: 700,
               }}
             >
-              {videoLoading ? "Working..." : "🚀 One-Click Adult Publish"}
+              {getButtonLabel("adult-publish", "🚀 One-Click Adult Publish")}
             </button>
 
             <button
@@ -271,8 +286,7 @@ export default function ContentDetailPage({
               onClick={() => oneClickPublish("kids")}
               disabled={videoLoading}
               style={{
-                background:
-                  selectedAction === "kids-publish" ? "#16a34a" : "#f59e0b",
+                background: getButtonColor("kids-publish", "#f59e0b"),
                 color: selectedAction === "kids-publish" ? "#fff" : "#111827",
                 padding: "12px 16px",
                 borderRadius: 12,
@@ -281,7 +295,7 @@ export default function ContentDetailPage({
                 fontWeight: 700,
               }}
             >
-              {videoLoading ? "Working..." : "🧸 One-Click Kids Publish"}
+              {getButtonLabel("kids-publish", "🧸 One-Click Kids Publish")}
             </button>
 
             <button
@@ -289,8 +303,7 @@ export default function ContentDetailPage({
               onClick={() => createVideo("adult")}
               disabled={videoLoading}
               style={{
-                background:
-                  selectedAction === "adult-video" ? "#16a34a" : "#7c3aed",
+                background: getButtonColor("adult-video", "#7c3aed"),
                 color: "#fff",
                 padding: "12px 16px",
                 borderRadius: 12,
@@ -299,7 +312,7 @@ export default function ContentDetailPage({
                 fontWeight: 600,
               }}
             >
-              🎬 Create Adult Video
+              {getButtonLabel("adult-video", "🎬 Create Adult Video")}
             </button>
 
             <button
@@ -307,8 +320,7 @@ export default function ContentDetailPage({
               onClick={() => createVideo("kids")}
               disabled={videoLoading}
               style={{
-                background:
-                  selectedAction === "kids-video" ? "#16a34a" : "#22c55e",
+                background: getButtonColor("kids-video", "#22c55e"),
                 color: "#fff",
                 padding: "12px 16px",
                 borderRadius: 12,
@@ -317,7 +329,7 @@ export default function ContentDetailPage({
                 fontWeight: 600,
               }}
             >
-              🧸 Create Kids Video
+              {getButtonLabel("kids-video", "🧸 Create Kids Video")}
             </button>
 
             <button
@@ -325,8 +337,7 @@ export default function ContentDetailPage({
               onClick={uploadToYouTube}
               disabled={videoLoading || !videoUrl}
               style={{
-                background:
-                  selectedAction === "youtube-upload" ? "#16a34a" : "#2563eb",
+                background: getButtonColor("youtube-upload", "#2563eb"),
                 color: "#fff",
                 padding: "12px 16px",
                 borderRadius: 12,
@@ -336,7 +347,7 @@ export default function ContentDetailPage({
                 opacity: videoUrl ? 1 : 0.6,
               }}
             >
-              📤 Upload to YouTube
+              {getButtonLabel("youtube-upload", "📤 Upload to YouTube")}
             </button>
           </div>
 
