@@ -1,6 +1,7 @@
 import "./globals.css";
+import type { Metadata } from "next";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "AI YouTube Agent",
   description: "Generate scripts, videos and upload to YouTube",
 };
@@ -12,37 +13,31 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body
-        style={{
-          margin: 0,
-          background: "#0b1020",
-          color: "#f8fafc",
-          fontFamily:
-            'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-        }}
-      >
-        <header
-          style={{
-            padding: "16px 24px",
-            borderBottom: "1px solid #1f2937",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <h2 style={{ margin: 0 }}>🚀 AI YouTube Agent</h2>
+      <body>
+        <div className="app-shell">
+          <header className="app-header">
+            <div className="app-header-inner">
+              <a href="/content" className="app-brand">
+                <span className="app-brand-dot" />
+                <span>AI YouTube Agent</span>
+              </a>
 
-          <nav style={{ display: "flex", gap: 16 }}>
-            <a href="/content" style={{ color: "#93c5fd" }}>
-              Dashboard
-            </a>
-            <a href="/login" style={{ color: "#93c5fd" }}>
-              Login
-            </a>
-          </nav>
-        </header>
+              <nav className="app-nav">
+                <a href="/content" className="app-nav-link">
+                  Dashboard
+                </a>
+                <a href="/" className="app-nav-link">
+                  New Script
+                </a>
+                <a href="/login" className="app-nav-link">
+                  Login
+                </a>
+              </nav>
+            </div>
+          </header>
 
-        <div style={{ padding: 24 }}>{children}</div>
+          <main className="app-main">{children}</main>
+        </div>
       </body>
     </html>
   );
