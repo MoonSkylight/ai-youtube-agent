@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type ScriptData = {
   id: string;
@@ -8,8 +8,7 @@ type ScriptData = {
   script_body: string;
 };
 
-type ActionKey =
-  | ""
+type FeatureKey =
   | "adult-publish"
   | "kids-publish"
   | "adult-video"
@@ -23,26 +22,33 @@ export default function ContentDetailPage({
 }) {
   const [script, setScript] = useState<ScriptData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [videoLoading, setVideoLoading] = useState(false);
+  const [liveStatus, setLiveStatus] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [selectedAction, setSelectedAction] = useState<ActionKey>("");
+  const [selectedFeature, setSelectedFeature] = useState<FeatureKey | "">("");
 
   useEffect(() => {
     async function loadScript() {
       try {
+        setLoading(true);
+        setLiveStatus("Loading script...");
         const resolvedParams = await params;
         const res = await fetch(`/api/get-script?id=${resolvedParams.id}`);
         const data = await res.json();
 
         if (data?.id) {
           setScript(data);
+          setMessage("");
+          setLiveStatus("Script loaded.");
         } else {
           setMessage("Script not found");
+          setLiveStatus("Script not found.");
         }
       } catch (error: any) {
         setMessage(error.message || "Failed to load script");
+        setLiveStatus("Failed to load script.");
       } finally {
         setLoading(false);
       }
@@ -52,10 +58,17 @@ export default function ContentDetailPage({
   }, [params]);
 
   async function createVideo(mode: "adult" | "kids") {
-    if (!script) return;
+    if (!script || busy) return;
 
-    setVideoLoading(true);
-    setMessage("Creating video...");
+    const feature = mode === "adult" ? "adult-video" : "kids-video";
+    setSelectedFeature(feature);
+    setBusy(true);
+    setMessage("");
+    setLiveStatus(
+      mode === "adult"
+        ? "Creating adult video in real time..."
+        : "Creating kids video in real time..."
+    );
 
     try {
       const res = await fetch("/api/render-video", {
@@ -73,31 +86,39 @@ export default function ContentDetailPage({
 
       if (!res.ok || !data.ok) {
         setMessage(data.error || "Failed to create video");
+        setLiveStatus("Video creation failed.");
         return;
       }
 
       if (data.videoUrl) {
         setVideoUrl(data.videoUrl);
+        setYoutubeUrl("");
+        setLiveStatus("Video created successfully. Ready for upload.");
         window.open(data.videoUrl, "_blank");
+      } else {
+        setLiveStatus("Video finished but no URL was returned.");
       }
-
-      setSelectedAction(mode === "adult" ? "adult-video" : "kids-video");
-      setMessage("Video created successfully");
     } catch (error: any) {
       setMessage(error.message || "Failed to create video");
+      setLiveStatus("Video creation failed.");
     } finally {
-      setVideoLoading(false);
+      setBusy(false);
     }
   }
 
   async function uploadToYouTube() {
-    if (!script || !videoUrl) {
-      setMessage("Create a video first");
+    if (!script || !videoUrl || busy) {
+      if (!videoUrl) {
+        setMessage("Create a video first");
+        setLiveStatus("Waiting for video before upload.");
+      }
       return;
     }
 
-    setVideoLoading(true);
-    setMessage("Uploading to YouTube...");
+    setSelectedFeature("youtube-upload");
+    setBusy(true);
+    setMessage("");
+    setLiveStatus("Uploading video to YouTube in real time...");
 
     try {
       const res = await fetch("/api/upload-to-youtube", {
@@ -117,28 +138,37 @@ export default function ContentDetailPage({
 
       if (!res.ok || !data.ok) {
         setMessage(data.error || "Upload failed");
+        setLiveStatus("YouTube upload failed.");
         return;
       }
 
       if (data.youtubeUrl) {
         setYoutubeUrl(data.youtubeUrl);
+        setLiveStatus("Uploaded to YouTube successfully.");
         window.open(data.youtubeUrl, "_blank");
+      } else {
+        setLiveStatus("Upload completed but no YouTube URL was returned.");
       }
-
-      setSelectedAction("youtube-upload");
-      setMessage("Upload completed successfully");
     } catch (error: any) {
       setMessage(error.message || "Upload failed");
+      setLiveStatus("YouTube upload failed.");
     } finally {
-      setVideoLoading(false);
+      setBusy(false);
     }
   }
 
   async function oneClickPublish(mode: "adult" | "kids") {
-    if (!script) return;
+    if (!script || busy) return;
 
-    setVideoLoading(true);
-    setMessage("Creating video and uploading to YouTube...");
+    const feature = mode === "adult" ? "adult-publish" : "kids-publish";
+    setSelectedFeature(feature);
+    setBusy(true);
+    setMessage("");
+    setLiveStatus(
+      mode === "adult"
+        ? "Writing script to final publish flow and creating adult video in real time..."
+        : "Writing script to final publish flow and creating kids video in real time..."
+    );
 
     try {
       const res = await fetch("/api/publish", {
@@ -158,6 +188,7 @@ export default function ContentDetailPage({
 
       if (!res.ok || !data.ok) {
         setMessage(data.error || "One-click publish failed");
+        setLiveStatus("One-click publish failed.");
         return;
       }
 
@@ -167,32 +198,61 @@ export default function ContentDetailPage({
 
       if (data.youtubeUrl) {
         setYoutubeUrl(data.youtubeUrl);
+        setLiveStatus("One-click publish completed successfully.");
         window.open(data.youtubeUrl, "_blank");
+      } else {
+        setLiveStatus("Publish finished but YouTube URL was not returned.");
       }
-
-      setSelectedAction(mode === "adult" ? "adult-publish" : "kids-publish");
-      setMessage("One-click publish completed successfully");
     } catch (error: any) {
       setMessage(error.message || "One-click publish failed");
+      setLiveStatus("One-click publish failed.");
     } finally {
-      setVideoLoading(false);
+      setBusy(false);
     }
   }
 
-  function getButtonLabel(action: ActionKey, defaultLabel: string) {
-    if (videoLoading && selectedAction === action) {
-      return "Working...";
-    }
+  const featureLabels = useMemo(
+    () => ({
+      "adult-publish": "🚀 One-Click Adult Publish",
+      "kids-publish": "🧸 One-Click Kids Publish",
+      "adult-video": "🎬 Create Adult Video",
+      "kids-video": "🌈 Create Kids Video",
+      "youtube-upload": "📤 Upload to YouTube",
+    }),
+    []
+  );
 
-    if (selectedAction === action) {
-      return "✅ Done";
-    }
+  function buttonStyle(
+    feature: FeatureKey,
+    defaultBackground: string,
+    defaultText = "#fff"
+  ) {
+    const active = selectedFeature === feature;
 
-    return defaultLabel;
+    return {
+      background: active ? "#16a34a" : defaultBackground,
+      color: active ? "#ffffff" : defaultText,
+      padding: "12px 16px",
+      borderRadius: 12,
+      border: "none",
+      cursor: busy ? "not-allowed" : "pointer",
+      fontWeight: 700,
+      opacity: busy && !active ? 0.7 : 1,
+      transition: "all 0.2s ease",
+      boxShadow: active ? "0 0 0 2px rgba(134,239,172,0.3)" : "none",
+    } as const;
   }
 
-  function getButtonColor(action: ActionKey, defaultColor: string) {
-    return selectedAction === action ? "#16a34a" : defaultColor;
+  function buttonText(feature: FeatureKey) {
+    if (busy && selectedFeature === feature) {
+      return "⏳ Working...";
+    }
+
+    if (!busy && selectedFeature === feature) {
+      return `✅ ${featureLabels[feature]}`;
+    }
+
+    return featureLabels[feature];
   }
 
   if (loading) {
@@ -267,92 +327,59 @@ export default function ContentDetailPage({
             <button
               type="button"
               onClick={() => oneClickPublish("adult")}
-              disabled={videoLoading}
-              style={{
-                background: getButtonColor("adult-publish", "#dc2626"),
-                color: "#fff",
-                padding: "12px 16px",
-                borderRadius: 12,
-                border: "none",
-                cursor: "pointer",
-                fontWeight: 700,
-              }}
+              disabled={busy}
+              style={buttonStyle("adult-publish", "#dc2626")}
             >
-              {getButtonLabel("adult-publish", "🚀 One-Click Adult Publish")}
+              {buttonText("adult-publish")}
             </button>
 
             <button
               type="button"
               onClick={() => oneClickPublish("kids")}
-              disabled={videoLoading}
-              style={{
-                background: getButtonColor("kids-publish", "#f59e0b"),
-                color: selectedAction === "kids-publish" ? "#fff" : "#111827",
-                padding: "12px 16px",
-                borderRadius: 12,
-                border: "none",
-                cursor: "pointer",
-                fontWeight: 700,
-              }}
+              disabled={busy}
+              style={buttonStyle("kids-publish", "#f59e0b", "#111827")}
             >
-              {getButtonLabel("kids-publish", "🧸 One-Click Kids Publish")}
+              {buttonText("kids-publish")}
             </button>
 
             <button
               type="button"
               onClick={() => createVideo("adult")}
-              disabled={videoLoading}
-              style={{
-                background: getButtonColor("adult-video", "#7c3aed"),
-                color: "#fff",
-                padding: "12px 16px",
-                borderRadius: 12,
-                border: "none",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
+              disabled={busy}
+              style={buttonStyle("adult-video", "#7c3aed")}
             >
-              {getButtonLabel("adult-video", "🎬 Create Adult Video")}
+              {buttonText("adult-video")}
             </button>
 
             <button
               type="button"
               onClick={() => createVideo("kids")}
-              disabled={videoLoading}
-              style={{
-                background: getButtonColor("kids-video", "#22c55e"),
-                color: "#fff",
-                padding: "12px 16px",
-                borderRadius: 12,
-                border: "none",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
+              disabled={busy}
+              style={buttonStyle("kids-video", "#2563eb")}
             >
-              {getButtonLabel("kids-video", "🧸 Create Kids Video")}
+              {buttonText("kids-video")}
             </button>
 
             <button
               type="button"
               onClick={uploadToYouTube}
-              disabled={videoLoading || !videoUrl}
+              disabled={busy || !videoUrl}
               style={{
-                background: getButtonColor("youtube-upload", "#2563eb"),
-                color: "#fff",
-                padding: "12px 16px",
-                borderRadius: 12,
-                border: "none",
-                cursor: videoLoading || !videoUrl ? "not-allowed" : "pointer",
-                fontWeight: 600,
+                ...buttonStyle("youtube-upload", "#2563eb"),
+                cursor: busy || !videoUrl ? "not-allowed" : "pointer",
                 opacity: videoUrl ? 1 : 0.6,
               }}
             >
-              {getButtonLabel("youtube-upload", "📤 Upload to YouTube")}
+              {buttonText("youtube-upload")}
             </button>
           </div>
 
+          <p style={{ marginTop: 14, marginBottom: 0, color: "#cbd5e1" }}>
+            {liveStatus}
+          </p>
+
           {videoUrl ? (
-            <p style={{ marginTop: 12, marginBottom: 0, color: "#86efac" }}>
+            <p style={{ marginTop: 10, marginBottom: 0, color: "#86efac" }}>
               Video ready for upload
             </p>
           ) : null}
@@ -364,7 +391,7 @@ export default function ContentDetailPage({
           ) : null}
 
           {message ? (
-            <p style={{ marginTop: 8, marginBottom: 0, color: "#cbd5e1" }}>
+            <p style={{ marginTop: 8, marginBottom: 0, color: "#fca5a5" }}>
               {message}
             </p>
           ) : null}
