@@ -10,18 +10,10 @@ function buildPrompt(script: string, mode: "adult" | "kids") {
   const clean = script.replace(/\s+/g, " ").trim().slice(0, 500);
 
   if (mode === "kids") {
-    return `Colorful animated motion, playful camera movement, friendly kids style. ${clean}`;
+    return `cartoon colorful kids animation ${clean}`;
   }
 
-  return `Cinematic motion, realistic lighting, smooth camera movement, dramatic scene animation. ${clean}`;
-}
-
-function getPromptImage(mode: "adult" | "kids") {
-  if (mode === "kids") {
-    return "https://images.unsplash.com/photo-1519337265831-281ec6cc8514?auto=format&fit=crop&w=1280&q=80";
-  }
-
-  return "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1280&q=80";
+  return `cinematic realistic 3d animation ${clean}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -30,8 +22,8 @@ export async function POST(req: NextRequest) {
 
     const scriptId = String(body.scriptId || "").trim();
     const mode = String(body.mode || "adult") as "adult" | "kids";
-    const title = String(body.title || "AI Generated Video").trim();
-    const description = String(body.description || "").trim();
+    const fallbackTitle = String(body.title || "AI Generated Video").trim();
+    const fallbackDescription = String(body.description || "").trim();
 
     if (!scriptId) {
       return NextResponse.json(
@@ -40,30 +32,66 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !process.env.SUPABASE_SERVICE_ROLE_KEY
+    ) {
+      return NextResponse.json(
+        { ok: false, error: "Supabase env variables missing" },
+        { status: 500 }
+      );
+    }
+
+    if (!process.env.RUNWAYML_API_SECRET) {
+      return NextResponse.json(
+        { ok: false, error: "Runway env variable missing" },
+        { status: 500 }
+      );
+    }
+
+    if (
+      !process.env.YOUTUBE_CLIENT_ID ||
+      !process.env.YOUTUBE_CLIENT_SECRET ||
+      !process.env.YOUTUBE_REFRESH_TOKEN
+    ) {
+      return NextResponse.json(
+        { ok: false, error: "YouTube env variables missing" },
+        { status: 500 }
+      );
+    }
+
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    const { data } = await supabase
+    const { data: script, error: scriptError } = await supabase
       .from("scripts")
       .select("*")
       .eq("id", scriptId)
       .single();
 
-    if (!data) {
+    if (scriptError || !script) {
       return NextResponse.json(
         { ok: false, error: "Script not found" },
         { status: 404 }
       );
     }
 
-    const promptText = buildPrompt(data.script_body || "", mode);
-    const promptImage = getPromptImage(mode);
+    const title = String(script.title || fallbackTitle || "AI Generated Video");
+    const description = String(
+      script.script_body || fallbackDescription || ""
+    );
+
+    const promptText = buildPrompt(description, mode);
 
     const runway = new RunwayML({
-      apiKey: process.env.RUNWAYML_API_SECRET!,
+      apiKey: process.env.RUNWAYML_API_SECRET,
     });
+
+    const promptImage = `https://dummyimage.com/1280x720/000/fff&text=${encodeURIComponent(
+      promptText
+    )}`;
 
     let videoUrl = "";
 
@@ -89,27 +117,15 @@ export async function POST(req: NextRequest) {
           { status: 500 }
         );
       }
-
-      await supabase
-        .from("scripts")
-        .update({
-          publish_status: "rendered",
-          video_url: videoUrl,
-          rendered_at: new Date().toISOString(),
-        })
-        .eq("id", scriptId);
-    } catch (error: any) {
+    } catch (error) {
       if (error instanceof TaskFailedError) {
         return NextResponse.json(
-          { ok: false, error: error.message || "Runway task failed" },
+          { ok: false, error: "Runway task failed" },
           { status: 500 }
         );
       }
 
-      return NextResponse.json(
-        { ok: false, error: error.message || "Render failed" },
-        { status: 500 }
-      );
+      throw error;
     }
 
     const oauth2Client = new google.auth.OAuth2(
@@ -126,16 +142,16 @@ export async function POST(req: NextRequest) {
       auth: oauth2Client,
     });
 
-    const response = await fetch(videoUrl);
+    const videoResponse = await fetch(videoUrl);
 
-    if (!response.ok) {
+    if (!videoResponse.ok) {
       return NextResponse.json(
         { ok: false, error: "Failed to fetch generated video" },
         { status: 400 }
       );
     }
 
-    const buffer = Buffer.from(await response.arrayBuffer());
+    const buffer = Buffer.from(await videoResponse.arrayBuffer());
     const stream = Readable.from(buffer);
 
     const upload = await youtube.videos.insert({
@@ -144,7 +160,13 @@ export async function POST(req: NextRequest) {
         snippet: {
           title: `${title} | AI Story`,
           description: description.slice(0, 4000),
-          tags: ["AI video", "AI story", "automation", "animation"],
+          tags: [
+            "AI video",
+            "AI story",
+            mode === "kids" ? "kids story" : "adult story",
+            "animation",
+            "automated video",
+          ],
           categoryId: "22",
         },
         status: {
@@ -158,17 +180,9 @@ export async function POST(req: NextRequest) {
     });
 
     const youtubeVideoId = upload.data.id;
-    const youtubeUrl = `https://www.youtube.com/watch?v=${youtubeVideoId}`;
-
-    await supabase
-      .from("scripts")
-      .update({
-        publish_status: "published",
-        youtube_video_id: youtubeVideoId,
-        youtube_url: youtubeUrl,
-        published_at: new Date().toISOString(),
-      })
-      .eq("id", scriptId);
+    const youtubeUrl = youtubeVideoId
+      ? `https://www.youtube.com/watch?v=${youtubeVideoId}`
+      : "";
 
     return NextResponse.json({
       ok: true,
@@ -178,7 +192,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     return NextResponse.json(
-      { ok: false, error: err.message || "One-click publish failed" },
+      { ok: false, error: err.message || "Publish failed" },
       { status: 500 }
     );
   }
