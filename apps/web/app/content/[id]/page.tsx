@@ -275,9 +275,17 @@ export default function ContentDetailPage({
           <div className="card-body stack">
             <div>
               <h2 className="card-title">Publishing Actions</h2>
-              <p className="card-muted">
-                Status: {script.publish_status || "draft"}
-              </p>
+              <div
+                className={`status-badge ${
+                  script.publish_status === "published"
+                    ? "status-published"
+                    : script.publish_status === "rendered"
+                    ? "status-rendered"
+                    : "status-draft"
+                }`}
+              >
+                {(script.publish_status || "draft").toUpperCase()}
+              </div>
             </div>
 
             <div className="actions">

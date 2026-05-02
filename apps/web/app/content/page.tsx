@@ -89,15 +89,22 @@ export default async function ContentPage() {
                       {script.title || "Untitled Script"}
                     </h3>
 
-                    <div className="script-meta">
-                      Script #{index + 1} • Status:{" "}
+                    <div className="script-meta">Script #{index + 1}</div>
+
+                    <div
+                      className={`status-badge ${
+                        script.publish_status === "published"
+                          ? "status-published"
+                          : script.publish_status === "rendered"
+                          ? "status-rendered"
+                          : "status-draft"
+                      }`}
+                      style={{ marginTop: 10 }}
+                    >
                       {getStatusLabel(script.publish_status)}
                     </div>
 
-                    <div
-                      className="actions"
-                      style={{ marginTop: 12 }}
-                    >
+                    <div className="actions" style={{ marginTop: 12 }}>
                       <Link
                         href={`/content/${script.id}`}
                         className="btn btn-primary"
