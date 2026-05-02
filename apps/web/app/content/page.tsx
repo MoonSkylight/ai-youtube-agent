@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
+import DashboardActions from "@/components/DashboardActions";
 
 type ScriptRow = {
   id: string;
@@ -33,12 +34,15 @@ export default async function ContentPage() {
     .order("created_at", { ascending: false });
 
   const scripts = (data ?? []) as ScriptRow[];
+
   const publishedCount = scripts.filter(
     (item) => item.publish_status === "published"
   ).length;
+
   const renderedCount = scripts.filter(
     (item) => item.publish_status === "rendered"
   ).length;
+
   const draftCount = scripts.filter(
     (item) => !item.publish_status || item.publish_status === "draft"
   ).length;
@@ -155,36 +159,13 @@ export default async function ContentPage() {
                       </span>
                     </div>
 
-                    <div className="actions" style={{ marginTop: 14 }}>
-                      <Link
-                        href={`/content/${script.id}`}
-                        className="ui-btn ui-btn-primary"
-                      >
-                        Open Workspace
-                      </Link>
-
-                      {script.youtube_url ? (
-                        <a
-                          href={script.youtube_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="ui-btn ui-btn-secondary"
-                        >
-                          Watch on YouTube
-                        </a>
-                      ) : null}
-
-                      {script.video_url && !script.youtube_url ? (
-                        <a
-                          href={script.video_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="ui-btn ui-btn-secondary"
-                        >
-                          Preview Video
-                        </a>
-                      ) : null}
-                    </div>
+                    <DashboardActions
+                      scriptId={script.id}
+                      hasVideo={!!script.video_url}
+                      hasYoutube={!!script.youtube_url}
+                      videoUrl={script.video_url}
+                      youtubeUrl={script.youtube_url}
+                    />
                   </article>
                 ))}
               </div>
