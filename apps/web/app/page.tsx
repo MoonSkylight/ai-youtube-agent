@@ -27,14 +27,6 @@ const artStyles = [
   "Classic painted scene",
 ];
 
-const pipeline = [
-  "Script writing",
-  "Voice narration",
-  "Scene images",
-  "Video assembly",
-  "YouTube publish",
-];
-
 const recentVideos = [
   "The Lost Star",
   "Magic Forest Friends",
@@ -44,6 +36,27 @@ const recentVideos = [
 export default function HomePage() {
   return (
     <main className="studio-shell">
+      <header className="app-nav">
+        <div className="app-nav-brand">
+          <Link href="/" className="app-nav-logo">
+            AI YouTube Agent
+          </Link>
+          <span className="app-nav-tag">Studio</span>
+        </div>
+
+        <nav className="app-nav-links">
+          <Link href="/" className="nav-link">
+            Home
+          </Link>
+          <Link href="/content" className="nav-link">
+            Dashboard
+          </Link>
+          <Link href="/login" className="nav-link">
+            Login
+          </Link>
+        </nav>
+      </header>
+
       <header className="studio-header">
         <div className="hero-copy">
           <div className="studio-kicker">AI YouTube Agent</div>
@@ -58,7 +71,9 @@ export default function HomePage() {
           <Link href="/content" className="ui-btn ui-btn-secondary">
             Open Dashboard
           </Link>
-          <button className="ui-btn ui-btn-primary">New Project</button>
+          <button className="ui-btn ui-btn-primary" type="button">
+            New Project
+          </button>
         </div>
       </header>
 
@@ -211,7 +226,7 @@ export default function HomePage() {
             <div className="summary-list">
               <div>
                 <span>Genre</span>
-                <strong>Children's story</strong>
+                <strong>Children&apos;s story</strong>
               </div>
               <div>
                 <span>Voice</span>
@@ -225,25 +240,6 @@ export default function HomePage() {
                 <span>Estimated cost</span>
                 <strong>$0 free stack</strong>
               </div>
-            </div>
-          </div>
-
-          <div className="studio-card">
-            <div className="section-head">
-              <span className="section-label">Pipeline</span>
-              <h2>Workflow state</h2>
-            </div>
-
-            <div className="pipeline-list">
-              {pipeline.map((item, index) => (
-                <div key={item} className="pipeline-item">
-                  <span className="pipeline-dot">{index + 1}</span>
-                  <div>
-                    <strong>{item}</strong>
-                    <p>Waiting for input</p>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
 
@@ -291,7 +287,9 @@ export default function HomePage() {
               <Link href="/content" className="ui-btn ui-btn-secondary">
                 View Content
               </Link>
-              <button className="ui-btn ui-btn-primary">Generate Now</button>
+              <Link href="/content" className="ui-btn ui-btn-primary">
+                Generate Now
+              </Link>
             </div>
           </div>
         </aside>

@@ -122,6 +122,7 @@ export default function LoginPage() {
               className="ui-btn ui-btn-primary login-submit"
               onClick={handleLogin}
               disabled={loading}
+              type="button"
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>

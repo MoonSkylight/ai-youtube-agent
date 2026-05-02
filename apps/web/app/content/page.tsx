@@ -45,6 +45,27 @@ export default async function ContentPage() {
 
   return (
     <main className="studio-shell">
+      <header className="app-nav">
+        <div className="app-nav-brand">
+          <Link href="/" className="app-nav-logo">
+            AI YouTube Agent
+          </Link>
+          <span className="app-nav-tag">Studio</span>
+        </div>
+
+        <nav className="app-nav-links">
+          <Link href="/" className="nav-link">
+            Home
+          </Link>
+          <Link href="/content" className="nav-link">
+            Dashboard
+          </Link>
+          <Link href="/login" className="nav-link">
+            Login
+          </Link>
+        </nav>
+      </header>
+
       <header className="studio-header">
         <div className="hero-copy">
           <div className="studio-kicker">AI YouTube Agent</div>

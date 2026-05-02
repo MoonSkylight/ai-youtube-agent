@@ -21,7 +21,7 @@ function getStatusClass(status: string | null | undefined) {
 export default function ContentDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
   const [script, setScript] = useState<ScriptData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,8 +36,7 @@ export default function ContentDetailPage({
   useEffect(() => {
     async function loadScript() {
       try {
-        const resolvedParams = await params;
-        const res = await fetch(`/api/get-script?id=${resolvedParams.id}`);
+        const res = await fetch(`/api/get-script?id=${params.id}`);
         const data = await res.json();
 
         if (data?.id) {
@@ -58,7 +57,7 @@ export default function ContentDetailPage({
     }
 
     loadScript();
-  }, [params]);
+  }, [params.id]);
 
   async function refreshScript() {
     if (!script?.id) return;
@@ -242,6 +241,27 @@ export default function ContentDetailPage({
 
   return (
     <main className="studio-shell">
+      <header className="app-nav">
+        <div className="app-nav-brand">
+          <Link href="/" className="app-nav-logo">
+            AI YouTube Agent
+          </Link>
+          <span className="app-nav-tag">Studio</span>
+        </div>
+
+        <nav className="app-nav-links">
+          <Link href="/" className="nav-link">
+            Home
+          </Link>
+          <Link href="/content" className="nav-link">
+            Dashboard
+          </Link>
+          <Link href="/login" className="nav-link">
+            Login
+          </Link>
+        </nav>
+      </header>
+
       <header className="studio-header">
         <div className="hero-copy">
           <div className="studio-kicker">Project Workspace</div>
@@ -288,6 +308,7 @@ export default function ContentDetailPage({
                 className="ui-btn btn-danger"
                 onClick={() => oneClickPublish("adult")}
                 disabled={working}
+                type="button"
               >
                 {working ? "Working..." : "One-Click Adult Publish"}
               </button>
@@ -296,6 +317,7 @@ export default function ContentDetailPage({
                 className="ui-btn btn-warning"
                 onClick={() => oneClickPublish("kids")}
                 disabled={working}
+                type="button"
               >
                 {working ? "Working..." : "One-Click Kids Publish"}
               </button>
@@ -304,6 +326,7 @@ export default function ContentDetailPage({
                 className="ui-btn ui-btn-primary"
                 onClick={() => createVideo("adult")}
                 disabled={working}
+                type="button"
               >
                 Create Adult Video
               </button>
@@ -312,6 +335,7 @@ export default function ContentDetailPage({
                 className="ui-btn btn-success"
                 onClick={() => createVideo("kids")}
                 disabled={working}
+                type="button"
               >
                 Create Kids Video
               </button>
@@ -320,6 +344,7 @@ export default function ContentDetailPage({
                 className="ui-btn ui-btn-secondary"
                 onClick={uploadToYouTube}
                 disabled={working}
+                type="button"
               >
                 Upload to YouTube
               </button>
