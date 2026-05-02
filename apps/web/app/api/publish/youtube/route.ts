@@ -21,9 +21,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
 
     const scriptId = String(body.scriptId || "").trim();
-    const mode = String(body.mode || "adult") as "adult" | "kids";
-    const fallbackTitle = String(body.title || "AI Generated Video").trim();
-    const fallbackDescription = String(body.description || "").trim();
+    const mode = String(body.mode || "adult").trim() as "adult" | "kids";
+    const title = String(body.title || "AI Generated Video").trim();
+    const description = String(body.description || "").trim();
 
     if (!scriptId) {
       return NextResponse.json(
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     if (!process.env.RUNWAYML_API_SECRET) {
       return NextResponse.json(
-        { ok: false, error: "Runway env variable missing" },
+        { ok: false, error: "RUNWAYML_API_SECRET missing" },
         { status: 500 }
       );
     }
@@ -73,17 +73,12 @@ export async function POST(req: NextRequest) {
 
     if (scriptError || !script) {
       return NextResponse.json(
-        { ok: false, error: "Script not found" },
+        { ok: false, error: scriptError?.message || "Script not found" },
         { status: 404 }
       );
     }
 
-    const title = String(script.title || fallbackTitle || "AI Generated Video");
-    const description = String(
-      script.script_body || fallbackDescription || ""
-    );
-
-    const promptText = buildPrompt(description, mode);
+    const promptText = buildPrompt(script.script_body || "", mode);
 
     const runway = new RunwayML({
       apiKey: process.env.RUNWAYML_API_SECRET,
@@ -142,16 +137,16 @@ export async function POST(req: NextRequest) {
       auth: oauth2Client,
     });
 
-    const videoResponse = await fetch(videoUrl);
+    const response = await fetch(videoUrl);
 
-    if (!videoResponse.ok) {
+    if (!response.ok) {
       return NextResponse.json(
         { ok: false, error: "Failed to fetch generated video" },
         { status: 400 }
       );
     }
 
-    const buffer = Buffer.from(await videoResponse.arrayBuffer());
+    const buffer = Buffer.from(await response.arrayBuffer());
     const stream = Readable.from(buffer);
 
     const upload = await youtube.videos.insert({
@@ -163,7 +158,7 @@ export async function POST(req: NextRequest) {
           tags: [
             "AI video",
             "AI story",
-            mode === "kids" ? "kids story" : "adult story",
+            "kids story",
             "animation",
             "automated video",
           ],
@@ -179,16 +174,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const youtubeVideoId = upload.data.id;
-    const youtubeUrl = youtubeVideoId
-      ? `https://www.youtube.com/watch?v=${youtubeVideoId}`
-      : "";
-
     return NextResponse.json({
       ok: true,
       videoUrl,
-      youtubeVideoId,
-      youtubeUrl,
+      youtubeVideoId: upload.data.id,
+      youtubeUrl: `https://www.youtube.com/watch?v=${upload.data.id}`,
     });
   } catch (err: any) {
     return NextResponse.json(

@@ -87,20 +87,31 @@ Write a complete YouTube-ready script based on this request.`,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
+    const payload = {
+      title,
+      prompt,
+      mode,
+      platform: "youtube",
+      script_body: scriptBody,
+    };
+
     const { data, error } = await supabase
       .from("scripts")
-      .insert({
-        title,
-        prompt,
-        mode,
-        script_body: scriptBody,
-      })
+      .insert(payload)
       .select("id, title")
       .single();
 
-    if (error || !data) {
+    if (error) {
+      console.error("SUPABASE INSERT ERROR:", error);
       return NextResponse.json(
-        { ok: false, error: error?.message || "Failed to save script" },
+        {
+          ok: false,
+          error: error.message,
+          details: error.details ?? null,
+          hint: error.hint ?? null,
+          code: error.code ?? null,
+          payload,
+        },
         { status: 500 }
       );
     }
@@ -112,8 +123,12 @@ Write a complete YouTube-ready script based on this request.`,
       script_body: scriptBody,
     });
   } catch (err: any) {
+    console.error("GENERATE SCRIPT ERROR:", err);
     return NextResponse.json(
-      { ok: false, error: err.message || "Failed to generate script" },
+      {
+        ok: false,
+        error: err?.message || "Failed to generate script",
+      },
       { status: 500 }
     );
   }
