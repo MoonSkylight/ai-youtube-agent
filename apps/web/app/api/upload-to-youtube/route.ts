@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 import { Readable } from "stream";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,6 +39,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !process.env.SUPABASE_SERVICE_ROLE_KEY
+    ) {
+      return NextResponse.json(
+        { ok: false, error: "Supabase env variables missing" },
+        { status: 500 }
+      );
+    }
+
     const oauth2Client = new google.auth.OAuth2(
       process.env.YOUTUBE_CLIENT_ID,
       process.env.YOUTUBE_CLIENT_SECRET
@@ -52,7 +63,6 @@ export async function POST(req: NextRequest) {
       auth: oauth2Client,
     });
 
-    // Download video from your render step
     const response = await fetch(videoUrl);
 
     if (!response.ok) {
@@ -81,7 +91,7 @@ export async function POST(req: NextRequest) {
           categoryId: "22",
         },
         status: {
-          privacyStatus: "public", // ✅ PUBLIC VIDEO
+          privacyStatus: "public",
         },
       },
       media: {
@@ -90,10 +100,40 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const youtubeVideoId = upload.data.id;
+    const youtubeUrl = `https://www.youtube.com/watch?v=${youtubeVideoId}`;
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    const { error: updateError } = await supabase
+      .from("scripts")
+      .update({
+        publish_status: "published",
+        youtube_video_id: youtubeVideoId,
+        youtube_url: youtubeUrl,
+        published_at: new Date().toISOString(),
+      })
+      .eq("id", scriptId);
+
+    if (updateError) {
+      return NextResponse.json(
+        {
+          ok: true,
+          youtubeVideoId,
+          youtubeUrl,
+          warning: `Uploaded to YouTube, but failed to update Supabase: ${updateError.message}`,
+        },
+        { status: 200 }
+      );
+    }
+
     return NextResponse.json({
       ok: true,
-      youtubeVideoId: upload.data.id,
-      youtubeUrl: `https://www.youtube.com/watch?v=${upload.data.id}`,
+      youtubeVideoId,
+      youtubeUrl,
     });
   } catch (err: any) {
     return NextResponse.json(
