@@ -84,6 +84,26 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      const { error: updateError } = await supabase
+        .from("scripts")
+        .update({
+          publish_status: "rendered",
+          video_url: videoUrl,
+          rendered_at: new Date().toISOString(),
+        })
+        .eq("id", scriptId);
+
+      if (updateError) {
+        return NextResponse.json(
+          {
+            ok: true,
+            videoUrl,
+            warning: `Video created, but failed to update Supabase: ${updateError.message}`,
+          },
+          { status: 200 }
+        );
+      }
+
       return NextResponse.json({
         ok: true,
         videoUrl,
