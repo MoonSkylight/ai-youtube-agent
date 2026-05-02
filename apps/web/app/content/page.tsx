@@ -1,235 +1,160 @@
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
-import DashboardActions from "@/components/DashboardActions";
 
 type ScriptRow = {
   id: string;
-  title: string;
-  publish_status: string | null;
-  youtube_url: string | null;
-  video_url: string | null;
+  title: string | null;
+  created_at?: string | null;
 };
 
-function getStatusLabel(status: string | null) {
-  if (status === "published") return "Published";
-  if (status === "rendered") return "Rendered";
-  return "Draft";
-}
-
-function getStatusClass(status: string | null) {
-  if (status === "published") return "status-published";
-  if (status === "rendered") return "status-rendered";
-  return "status-draft";
-}
-
 export default async function ContentPage() {
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.SUPABASE_SERVICE_ROLE_KEY
+  ) {
+    return (
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: 24 }}>
+        <h1 style={{ marginTop: 0 }}>Dashboard</h1>
+        <p style={{ color: "#fca5a5" }}>
+          Supabase environment variables are missing.
+        </p>
+      </div>
+    );
+  }
+
   const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
   );
 
   const { data, error } = await supabase
     .from("scripts")
-    .select("id, title, publish_status, youtube_url, video_url, created_at")
+    .select("id, title, created_at")
     .order("created_at", { ascending: false });
 
-  const scripts = (data ?? []) as ScriptRow[];
-
-  const publishedCount = scripts.filter(
-    (item) => item.publish_status === "published"
-  ).length;
-
-  const renderedCount = scripts.filter(
-    (item) => item.publish_status === "rendered"
-  ).length;
-
-  const draftCount = scripts.filter(
-    (item) => !item.publish_status || item.publish_status === "draft"
-  ).length;
+  const scripts: ScriptRow[] = data || [];
 
   return (
-    <main className="studio-shell">
-      <header className="app-nav">
-        <div className="app-nav-brand">
-          <Link href="/" className="app-nav-logo">
-            AI YouTube Agent
-          </Link>
-          <span className="app-nav-tag">Studio</span>
-        </div>
-
-        <nav className="app-nav-links">
-          <Link href="/" className="nav-link">
-            Home
-          </Link>
-          <Link href="/content" className="nav-link">
-            Dashboard
-          </Link>
-          <Link href="/login" className="nav-link">
-            Login
-          </Link>
-        </nav>
-      </header>
-
-      <header className="studio-header">
-        <div className="hero-copy">
-          <div className="studio-kicker">AI YouTube Agent</div>
-          <h1 className="studio-title">Content command center</h1>
-          <p className="studio-subtitle">
-            Track scripts, monitor production status, and jump directly into
-            render or publish actions.
+    <div style={{ maxWidth: 1100, margin: "0 auto", padding: 24 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 16,
+          flexWrap: "wrap",
+          marginBottom: 24,
+        }}
+      >
+        <div>
+          <h1 style={{ margin: 0 }}>Dashboard</h1>
+          <p style={{ marginTop: 8, color: "#94a3b8" }}>
+            Manage scripts, open a script, create videos, and publish to
+            YouTube.
           </p>
         </div>
 
-        <div className="studio-header-actions">
-          <Link href="/" className="ui-btn ui-btn-secondary">
-            Back Home
+        <Link
+          href="/"
+          style={{
+            background: "#2563eb",
+            color: "#fff",
+            padding: "12px 16px",
+            borderRadius: 12,
+            fontWeight: 700,
+            textDecoration: "none",
+          }}
+        >
+          + New Script
+        </Link>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: 16,
+        }}
+      >
+        {error ? (
+          <div
+            style={{
+              gridColumn: "1 / -1",
+              background: "#111827",
+              border: "1px solid #7f1d1d",
+              color: "#fecaca",
+              padding: 20,
+              borderRadius: 16,
+            }}
+          >
+            Failed to load scripts.
+          </div>
+        ) : null}
+
+        {!error && scripts.length === 0 ? (
+          <div
+            style={{
+              gridColumn: "1 / -1",
+              background: "#111827",
+              border: "1px solid #1f2937",
+              color: "#cbd5e1",
+              padding: 24,
+              borderRadius: 16,
+            }}
+          >
+            No scripts yet. Create your first script to get started.
+          </div>
+        ) : null}
+
+        {scripts.map((item) => (
+          <Link
+            key={item.id}
+            href={`/content/${item.id}`}
+            style={{
+              display: "block",
+              background: "#111827",
+              border: "1px solid #1f2937",
+              borderRadius: 18,
+              padding: 20,
+              color: "#e5e7eb",
+              textDecoration: "none",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+            }}
+          >
+            <div
+              style={{
+                display: "inline-block",
+                marginBottom: 12,
+                padding: "6px 10px",
+                borderRadius: 999,
+                background: "rgba(37,99,235,0.15)",
+                color: "#93c5fd",
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+              }}
+            >
+              Script
+            </div>
+
+            <h2
+              style={{
+                margin: "0 0 10px 0",
+                fontSize: 20,
+                lineHeight: 1.3,
+              }}
+            >
+              {item.title?.trim() || "Untitled Script"}
+            </h2>
+
+            <p style={{ margin: 0, color: "#94a3b8", fontSize: 14 }}>
+              Open this script and use the action buttons to create video or
+              publish.
+            </p>
           </Link>
-          <Link href="/" className="ui-btn ui-btn-primary">
-            New Story
-          </Link>
-        </div>
-      </header>
-
-      <section className="stats-strip">
-        <div className="metric-card">
-          <span>Total scripts</span>
-          <strong>{scripts.length}</strong>
-        </div>
-        <div className="metric-card">
-          <span>Published</span>
-          <strong>{publishedCount}</strong>
-        </div>
-        <div className="metric-card">
-          <span>Rendered</span>
-          <strong>{renderedCount}</strong>
-        </div>
-        <div className="metric-card">
-          <span>Drafts</span>
-          <strong>{draftCount}</strong>
-        </div>
-      </section>
-
-      <section className="studio-grid">
-        <div className="studio-main">
-          <div className="studio-card">
-            <div className="section-head">
-              <span className="section-label">Library</span>
-              <h2>Story projects</h2>
-              <p>
-                Open any project to generate video, upload to YouTube, or review
-                saved output.
-              </p>
-            </div>
-
-            {error ? (
-              <div className="notice notice-danger">
-                Failed to load scripts from Supabase.
-              </div>
-            ) : scripts.length === 0 ? (
-              <div className="empty">No scripts found yet.</div>
-            ) : (
-              <div className="project-list">
-                {scripts.map((script, index) => (
-                  <article key={script.id} className="project-card">
-                    <div className="project-top">
-                      <div>
-                        <div className="project-index">
-                          Project #{String(index + 1).padStart(2, "0")}
-                        </div>
-                        <h3 className="project-title">
-                          {script.title || "Untitled Script"}
-                        </h3>
-                      </div>
-
-                      <div
-                        className={`status-badge ${getStatusClass(
-                          script.publish_status
-                        )}`}
-                      >
-                        {getStatusLabel(script.publish_status)}
-                      </div>
-                    </div>
-
-                    <div className="project-links">
-                      <span>
-                        Video: {script.video_url ? "Generated" : "Not ready"}
-                      </span>
-                      <span>
-                        YouTube: {script.youtube_url ? "Published" : "Not published"}
-                      </span>
-                    </div>
-
-                    <DashboardActions
-                      scriptId={script.id}
-                      hasVideo={!!script.video_url}
-                      hasYoutube={!!script.youtube_url}
-                      videoUrl={script.video_url}
-                      youtubeUrl={script.youtube_url}
-                    />
-                  </article>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <aside className="studio-side">
-          <div className="studio-card">
-            <div className="section-head">
-              <span className="section-label">Pipeline</span>
-              <h2>Status overview</h2>
-            </div>
-
-            <div className="pipeline-list">
-              <div className="pipeline-item">
-                <span className="pipeline-dot">1</span>
-                <div>
-                  <strong>Draft queue</strong>
-                  <p>{draftCount} waiting for production</p>
-                </div>
-              </div>
-
-              <div className="pipeline-item">
-                <span className="pipeline-dot">2</span>
-                <div>
-                  <strong>Rendered videos</strong>
-                  <p>{renderedCount} ready for upload</p>
-                </div>
-              </div>
-
-              <div className="pipeline-item">
-                <span className="pipeline-dot">3</span>
-                <div>
-                  <strong>Published library</strong>
-                  <p>{publishedCount} live on YouTube</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="studio-card">
-            <div className="section-head">
-              <span className="section-label">Guidance</span>
-              <h2>Recommended flow</h2>
-            </div>
-
-            <div className="summary-list">
-              <div>
-                <span>1</span>
-                <strong>Open a script workspace</strong>
-              </div>
-              <div>
-                <span>2</span>
-                <strong>Generate the video render</strong>
-              </div>
-              <div>
-                <span>3</span>
-                <strong>Upload or one-click publish</strong>
-              </div>
-            </div>
-          </div>
-        </aside>
-      </section>
-    </main>
+        ))}
+      </div>
+    </div>
   );
 }
