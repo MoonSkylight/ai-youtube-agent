@@ -8,10 +8,18 @@ function buildPrompt(script: string, mode: "adult" | "kids") {
   const clean = script.replace(/\s+/g, " ").trim().slice(0, 500);
 
   if (mode === "kids") {
-    return `cartoon colorful kids animation ${clean}`;
+    return `Colorful animated motion, playful camera movement, friendly kids style. ${clean}`;
   }
 
-  return `cinematic realistic 3d animation ${clean}`;
+  return `Cinematic motion, realistic lighting, smooth camera movement, dramatic scene animation. ${clean}`;
+}
+
+function getPromptImage(mode: "adult" | "kids") {
+  if (mode === "kids") {
+    return "https://images.unsplash.com/photo-1519337265831-281ec6cc8514?auto=format&fit=crop&w=1280&q=80";
+  }
+
+  return "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1280&q=80";
 }
 
 export async function POST(req: NextRequest) {
@@ -47,21 +55,17 @@ export async function POST(req: NextRequest) {
     }
 
     const promptText = buildPrompt(data.script_body || "", mode);
+    const promptImage = getPromptImage(mode);
 
     const runway = new RunwayML({
       apiKey: process.env.RUNWAYML_API_SECRET!,
     });
 
-    // 🔥 FIX: Provide image (required)
-    const promptImage = `https://dummyimage.com/1280x720/000/fff&text=${encodeURIComponent(
-      promptText
-    )}`;
-
     try {
       const task = await runway.imageToVideo
         .create({
           model: "gen4.5",
-          promptImage, // ✅ REQUIRED
+          promptImage,
           promptText,
           ratio: "1280:720",
           duration: 5,
@@ -84,15 +88,18 @@ export async function POST(req: NextRequest) {
         ok: true,
         videoUrl,
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof TaskFailedError) {
         return NextResponse.json(
-          { ok: false, error: "Runway task failed" },
+          { ok: false, error: error.message || "Runway task failed" },
           { status: 500 }
         );
       }
 
-      throw error;
+      return NextResponse.json(
+        { ok: false, error: error.message || "Render failed" },
+        { status: 500 }
+      );
     }
   } catch (err: any) {
     return NextResponse.json(
