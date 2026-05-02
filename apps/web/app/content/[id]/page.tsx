@@ -1,85 +1,61 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type ScriptData = {
   id: string;
   title: string;
   script_body: string;
-  video_url?: string | null;
-  youtube_url?: string | null;
-  publish_status?: string | null;
 };
 
-function getStatusClass(status: string | null | undefined) {
-  if (status === "published") return "status-published";
-  if (status === "rendered") return "status-rendered";
-  return "status-draft";
-}
+type ActionKey =
+  | ""
+  | "adult-publish"
+  | "kids-publish"
+  | "adult-video"
+  | "kids-video"
+  | "youtube-upload";
 
 export default function ContentDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const [script, setScript] = useState<ScriptData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [working, setWorking] = useState(false);
   const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState<
-    "info" | "success" | "warning" | "danger"
-  >("info");
+  const [videoLoading, setVideoLoading] = useState(false);
   const [videoUrl, setVideoUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [selectedAction, setSelectedAction] = useState<ActionKey>("");
 
   useEffect(() => {
     async function loadScript() {
       try {
-        const res = await fetch(`/api/get-script?id=${params.id}`);
+        const resolvedParams = await params;
+        const res = await fetch(`/api/get-script?id=${resolvedParams.id}`);
         const data = await res.json();
 
         if (data?.id) {
           setScript(data);
-          setVideoUrl(data.video_url || "");
-          setYoutubeUrl(data.youtube_url || "");
-          setMessage("");
         } else {
-          setMessageType("danger");
-          setMessage("Script not found.");
+          setMessage("Script not found");
         }
       } catch (error: any) {
-        setMessageType("danger");
-        setMessage(error?.message || "Failed to load script.");
+        setMessage(error.message || "Failed to load script");
       } finally {
         setLoading(false);
       }
     }
 
     loadScript();
-  }, [params.id]);
-
-  async function refreshScript() {
-    if (!script?.id) return;
-
-    try {
-      const res = await fetch(`/api/get-script?id=${script.id}`);
-      const data = await res.json();
-
-      if (data?.id) {
-        setScript(data);
-        setVideoUrl(data.video_url || "");
-        setYoutubeUrl(data.youtube_url || "");
-      }
-    } catch {}
-  }
+  }, [params]);
 
   async function createVideo(mode: "adult" | "kids") {
     if (!script) return;
 
-    setWorking(true);
-    setMessageType("info");
-    setMessage(`Creating ${mode} video...`);
+    setVideoLoading(true);
+    setMessage("Creating video...");
 
     try {
       const res = await fetch("/api/render-video", {
@@ -96,35 +72,31 @@ export default function ContentDetailPage({
       const data = await res.json();
 
       if (!res.ok || !data.ok) {
-        setMessageType("danger");
-        setMessage(data.error || "Failed to create video.");
+        setMessage(data.error || "Failed to create video");
         return;
       }
 
       if (data.videoUrl) {
         setVideoUrl(data.videoUrl);
+        window.open(data.videoUrl, "_blank");
       }
 
-      await refreshScript();
-      setMessageType("success");
-      setMessage("Video created successfully.");
+      setSelectedAction(mode === "adult" ? "adult-video" : "kids-video");
+      setMessage("Video created successfully");
     } catch (error: any) {
-      setMessageType("danger");
-      setMessage(error?.message || "Failed to create video.");
+      setMessage(error.message || "Failed to create video");
     } finally {
-      setWorking(false);
+      setVideoLoading(false);
     }
   }
 
   async function uploadToYouTube() {
     if (!script || !videoUrl) {
-      setMessageType("warning");
-      setMessage("Create a video first.");
+      setMessage("Create a video first");
       return;
     }
 
-    setWorking(true);
-    setMessageType("info");
+    setVideoLoading(true);
     setMessage("Uploading to YouTube...");
 
     try {
@@ -144,32 +116,29 @@ export default function ContentDetailPage({
       const data = await res.json();
 
       if (!res.ok || !data.ok) {
-        setMessageType("danger");
-        setMessage(data.error || "Upload failed.");
+        setMessage(data.error || "Upload failed");
         return;
       }
 
       if (data.youtubeUrl) {
         setYoutubeUrl(data.youtubeUrl);
+        window.open(data.youtubeUrl, "_blank");
       }
 
-      await refreshScript();
-      setMessageType("success");
-      setMessage("Upload completed successfully.");
+      setSelectedAction("youtube-upload");
+      setMessage("Upload completed successfully");
     } catch (error: any) {
-      setMessageType("danger");
-      setMessage(error?.message || "Upload failed.");
+      setMessage(error.message || "Upload failed");
     } finally {
-      setWorking(false);
+      setVideoLoading(false);
     }
   }
 
   async function oneClickPublish(mode: "adult" | "kids") {
     if (!script) return;
 
-    setWorking(true);
-    setMessageType("info");
-    setMessage(`Creating and publishing ${mode} video...`);
+    setVideoLoading(true);
+    setMessage("Creating video and uploading to YouTube...");
 
     try {
       const res = await fetch("/api/publish", {
@@ -188,8 +157,7 @@ export default function ContentDetailPage({
       const data = await res.json();
 
       if (!res.ok || !data.ok) {
-        setMessageType("danger");
-        setMessage(data.error || "One-click publish failed.");
+        setMessage(data.error || "One-click publish failed");
         return;
       }
 
@@ -199,219 +167,212 @@ export default function ContentDetailPage({
 
       if (data.youtubeUrl) {
         setYoutubeUrl(data.youtubeUrl);
+        window.open(data.youtubeUrl, "_blank");
       }
 
-      await refreshScript();
-      setMessageType("success");
-      setMessage("One-click publish completed successfully.");
+      setSelectedAction(mode === "adult" ? "adult-publish" : "kids-publish");
+      setMessage("One-click publish completed successfully");
     } catch (error: any) {
-      setMessageType("danger");
-      setMessage(error?.message || "One-click publish failed.");
+      setMessage(error.message || "One-click publish failed");
     } finally {
-      setWorking(false);
+      setVideoLoading(false);
     }
   }
 
   if (loading) {
     return (
-      <main className="studio-shell">
-        <div className="studio-card">
-          <div className="notice notice-info">Loading workspace...</div>
-        </div>
-      </main>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#0b1020",
+          color: "#fff",
+          padding: 40,
+        }}
+      >
+        Loading...
+      </div>
     );
   }
 
   if (!script) {
     return (
-      <main className="studio-shell">
-        <div className="studio-card">
-          <div className="stack">
-            <Link href="/content" className="ui-btn ui-btn-secondary">
-              Back to Dashboard
-            </Link>
-            <div className="notice notice-danger">
-              {message || "Script not found."}
-            </div>
-          </div>
-        </div>
-      </main>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#0b1020",
+          color: "#fff",
+          padding: 40,
+        }}
+      >
+        {message || "Script not found"}
+      </div>
     );
   }
 
   return (
-    <main className="studio-shell">
-      <header className="app-nav">
-        <div className="app-nav-brand">
-          <Link href="/" className="app-nav-logo">
-            AI YouTube Agent
-          </Link>
-          <span className="app-nav-tag">Studio</span>
-        </div>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#0b1020",
+        color: "#fff",
+        padding: 40,
+      }}
+    >
+      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+        <a
+          href="/content"
+          style={{
+            color: "#93c5fd",
+            textDecoration: "none",
+            display: "inline-block",
+            marginBottom: 20,
+          }}
+        >
+          ← Back to Dashboard
+        </a>
 
-        <nav className="app-nav-links">
-          <Link href="/" className="nav-link">
-            Home
-          </Link>
-          <Link href="/content" className="nav-link">
-            Dashboard
-          </Link>
-          <Link href="/login" className="nav-link">
-            Login
-          </Link>
-        </nav>
-      </header>
+        <h1 style={{ marginTop: 0, marginBottom: 16 }}>{script.title}</h1>
 
-      <header className="studio-header">
-        <div className="hero-copy">
-          <div className="studio-kicker">Project Workspace</div>
-          <h1 className="studio-title">{script.title}</h1>
-          <p className="studio-subtitle">
-            Review the script, render video output, and publish directly to
-            YouTube.
-          </p>
-        </div>
+        <div
+          style={{
+            position: "sticky",
+            top: 16,
+            zIndex: 50,
+            background: "rgba(11,16,32,0.92)",
+            backdropFilter: "blur(10px)",
+            padding: 16,
+            borderRadius: 16,
+            border: "1px solid #1f2937",
+            boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
+            marginBottom: 24,
+          }}
+        >
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => oneClickPublish("adult")}
+              disabled={videoLoading}
+              style={{
+                background:
+                  selectedAction === "adult-publish" ? "#16a34a" : "#dc2626",
+                color: "#fff",
+                padding: "12px 16px",
+                borderRadius: 12,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 700,
+              }}
+            >
+              {videoLoading ? "Working..." : "🚀 One-Click Adult Publish"}
+            </button>
 
-        <div className="studio-header-actions">
-          <div className={`status-badge ${getStatusClass(script.publish_status)}`}>
-            {(script.publish_status || "draft").toUpperCase()}
+            <button
+              type="button"
+              onClick={() => oneClickPublish("kids")}
+              disabled={videoLoading}
+              style={{
+                background:
+                  selectedAction === "kids-publish" ? "#16a34a" : "#f59e0b",
+                color: selectedAction === "kids-publish" ? "#fff" : "#111827",
+                padding: "12px 16px",
+                borderRadius: 12,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 700,
+              }}
+            >
+              {videoLoading ? "Working..." : "🧸 One-Click Kids Publish"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => createVideo("adult")}
+              disabled={videoLoading}
+              style={{
+                background:
+                  selectedAction === "adult-video" ? "#16a34a" : "#7c3aed",
+                color: "#fff",
+                padding: "12px 16px",
+                borderRadius: 12,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              🎬 Create Adult Video
+            </button>
+
+            <button
+              type="button"
+              onClick={() => createVideo("kids")}
+              disabled={videoLoading}
+              style={{
+                background:
+                  selectedAction === "kids-video" ? "#16a34a" : "#22c55e",
+                color: "#fff",
+                padding: "12px 16px",
+                borderRadius: 12,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              🧸 Create Kids Video
+            </button>
+
+            <button
+              type="button"
+              onClick={uploadToYouTube}
+              disabled={videoLoading || !videoUrl}
+              style={{
+                background:
+                  selectedAction === "youtube-upload" ? "#16a34a" : "#2563eb",
+                color: "#fff",
+                padding: "12px 16px",
+                borderRadius: 12,
+                border: "none",
+                cursor: videoLoading || !videoUrl ? "not-allowed" : "pointer",
+                fontWeight: 600,
+                opacity: videoUrl ? 1 : 0.6,
+              }}
+            >
+              📤 Upload to YouTube
+            </button>
           </div>
 
-          <Link href="/content" className="ui-btn ui-btn-secondary">
-            Back to Dashboard
-          </Link>
+          {videoUrl ? (
+            <p style={{ marginTop: 12, marginBottom: 0, color: "#86efac" }}>
+              Video ready for upload
+            </p>
+          ) : null}
+
+          {youtubeUrl ? (
+            <p style={{ marginTop: 8, marginBottom: 0, color: "#93c5fd" }}>
+              YouTube published successfully
+            </p>
+          ) : null}
+
+          {message ? (
+            <p style={{ marginTop: 8, marginBottom: 0, color: "#cbd5e1" }}>
+              {message}
+            </p>
+          ) : null}
         </div>
-      </header>
 
-      <section className="studio-grid">
-        <div className="studio-main">
-          <div className="studio-card">
-            <div className="section-head">
-              <span className="section-label">Script</span>
-              <h2>Story content</h2>
-              <p>Review the saved script before generating or publishing.</p>
-            </div>
-
-            <textarea value={script.script_body || ""} readOnly />
-          </div>
+        <div
+          style={{
+            background: "#111827",
+            padding: 24,
+            borderRadius: 16,
+            lineHeight: 1.8,
+            whiteSpace: "pre-wrap",
+            color: "#e5e7eb",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+          }}
+        >
+          {script.script_body}
         </div>
-
-        <aside className="studio-side">
-          <div className="studio-card">
-            <div className="section-head">
-              <span className="section-label">Actions</span>
-              <h2>Production controls</h2>
-            </div>
-
-            <div className="stack">
-              <button
-                className="ui-btn btn-danger"
-                onClick={() => oneClickPublish("adult")}
-                disabled={working}
-                type="button"
-              >
-                {working ? "Working..." : "One-Click Adult Publish"}
-              </button>
-
-              <button
-                className="ui-btn btn-warning"
-                onClick={() => oneClickPublish("kids")}
-                disabled={working}
-                type="button"
-              >
-                {working ? "Working..." : "One-Click Kids Publish"}
-              </button>
-
-              <button
-                className="ui-btn ui-btn-primary"
-                onClick={() => createVideo("adult")}
-                disabled={working}
-                type="button"
-              >
-                Create Adult Video
-              </button>
-
-              <button
-                className="ui-btn btn-success"
-                onClick={() => createVideo("kids")}
-                disabled={working}
-                type="button"
-              >
-                Create Kids Video
-              </button>
-
-              <button
-                className="ui-btn ui-btn-secondary"
-                onClick={uploadToYouTube}
-                disabled={working}
-                type="button"
-              >
-                Upload to YouTube
-              </button>
-            </div>
-          </div>
-
-          <div className="studio-card">
-            <div className="section-head">
-              <span className="section-label">Status</span>
-              <h2>Project output</h2>
-            </div>
-
-            {message ? (
-              <div
-                className={`notice ${
-                  messageType === "success"
-                    ? "notice-success"
-                    : messageType === "warning"
-                    ? "notice-warning"
-                    : messageType === "danger"
-                    ? "notice-danger"
-                    : "notice-info"
-                }`}
-              >
-                {message}
-              </div>
-            ) : (
-              <div className="notice notice-info">
-                No active task. Choose a production action to continue.
-              </div>
-            )}
-
-            <div className="summary-list" style={{ marginTop: 16 }}>
-              <div>
-                <span>Generated video</span>
-                <strong>{videoUrl ? "Available" : "Waiting"}</strong>
-              </div>
-              <div>
-                <span>YouTube link</span>
-                <strong>{youtubeUrl ? "Published" : "Waiting"}</strong>
-              </div>
-            </div>
-
-            {videoUrl ? (
-              <a
-                href={videoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="output-link"
-              >
-                Open generated video
-              </a>
-            ) : null}
-
-            {youtubeUrl ? (
-              <a
-                href={youtubeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="output-link"
-              >
-                Open YouTube video
-              </a>
-            ) : null}
-          </div>
-        </aside>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }
