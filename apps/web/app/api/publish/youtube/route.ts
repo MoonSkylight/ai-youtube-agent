@@ -1,81 +1,184 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import RunwayML, { TaskFailedError } from "@runwayml/sdk";
+import { google } from "googleapis";
+import { Readable } from "stream";
+
+function buildPrompt(script: string, mode: "adult" | "kids") {
+  const clean = script.replace(/\s+/g, " ").trim().slice(0, 500);
+
+  if (mode === "kids") {
+    return `Colorful animated motion, playful camera movement, friendly kids style. ${clean}`;
+  }
+
+  return `Cinematic motion, realistic lighting, smooth camera movement, dramatic scene animation. ${clean}`;
+}
+
+function getPromptImage(mode: "adult" | "kids") {
+  if (mode === "kids") {
+    return "https://images.unsplash.com/photo-1519337265831-281ec6cc8514?auto=format&fit=crop&w=1280&q=80";
+  }
+
+  return "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1280&q=80";
+}
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
 
     const scriptId = String(body.scriptId || "").trim();
-    const mode = String(body.mode || "adult").trim();
+    const mode = String(body.mode || "adult") as "adult" | "kids";
+    const title = String(body.title || "AI Generated Video").trim();
+    const description = String(body.description || "").trim();
 
     if (!scriptId) {
       return NextResponse.json(
-        { ok: false, error: "scriptId is required" },
+        { ok: false, error: "scriptId required" },
         { status: 400 }
       );
     }
 
-    const origin =
-      req.headers.get("origin") ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      "http://localhost:3000";
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-    const renderRes = await fetch(`${origin}/api/render-video`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ scriptId, mode }),
+    const { data } = await supabase
+      .from("scripts")
+      .select("*")
+      .eq("id", scriptId)
+      .single();
+
+    if (!data) {
+      return NextResponse.json(
+        { ok: false, error: "Script not found" },
+        { status: 404 }
+      );
+    }
+
+    const promptText = buildPrompt(data.script_body || "", mode);
+    const promptImage = getPromptImage(mode);
+
+    const runway = new RunwayML({
+      apiKey: process.env.RUNWAYML_API_SECRET!,
     });
 
-    const renderData = await renderRes.json();
+    let videoUrl = "";
 
-    if (!renderRes.ok || !renderData.ok || !renderData.videoUrl) {
+    try {
+      const task = await runway.imageToVideo
+        .create({
+          model: "gen4.5",
+          promptImage,
+          promptText,
+          ratio: "1280:720",
+          duration: 5,
+        })
+        .waitForTaskOutput({
+          timeout: 5 * 60 * 1000,
+        });
+
+      const output = Array.isArray(task.output) ? task.output : [];
+      videoUrl = output[0] || "";
+
+      if (!videoUrl) {
+        return NextResponse.json(
+          { ok: false, error: "No video generated" },
+          { status: 500 }
+        );
+      }
+
+      await supabase
+        .from("scripts")
+        .update({
+          publish_status: "rendered",
+          video_url: videoUrl,
+          rendered_at: new Date().toISOString(),
+        })
+        .eq("id", scriptId);
+    } catch (error: any) {
+      if (error instanceof TaskFailedError) {
+        return NextResponse.json(
+          { ok: false, error: error.message || "Runway task failed" },
+          { status: 500 }
+        );
+      }
+
       return NextResponse.json(
-        {
-          ok: false,
-          error: renderData.error || "Video generation failed",
-        },
+        { ok: false, error: error.message || "Render failed" },
         { status: 500 }
       );
     }
 
-    const uploadRes = await fetch(`${origin}/api/upload-to-youtube`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        scriptId,
-        videoUrl: renderData.videoUrl,
-        title: renderData.title || body.title || "AI Generated Video",
-        description: body.description || "",
-      }),
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.YOUTUBE_CLIENT_ID,
+      process.env.YOUTUBE_CLIENT_SECRET
+    );
+
+    oauth2Client.setCredentials({
+      refresh_token: process.env.YOUTUBE_REFRESH_TOKEN,
     });
 
-    const uploadData = await uploadRes.json();
+    const youtube = google.youtube({
+      version: "v3",
+      auth: oauth2Client,
+    });
 
-    if (!uploadRes.ok || !uploadData.ok) {
+    const response = await fetch(videoUrl);
+
+    if (!response.ok) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: uploadData.error || "Upload failed",
-          videoUrl: renderData.videoUrl,
-        },
-        { status: 500 }
+        { ok: false, error: "Failed to fetch generated video" },
+        { status: 400 }
       );
     }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const stream = Readable.from(buffer);
+
+    const upload = await youtube.videos.insert({
+      part: ["snippet", "status"],
+      requestBody: {
+        snippet: {
+          title: `${title} | AI Story`,
+          description: description.slice(0, 4000),
+          tags: ["AI video", "AI story", "automation", "animation"],
+          categoryId: "22",
+        },
+        status: {
+          privacyStatus: "public",
+        },
+      },
+      media: {
+        mimeType: "video/mp4",
+        body: stream,
+      },
+    });
+
+    const youtubeVideoId = upload.data.id;
+    const youtubeUrl = `https://www.youtube.com/watch?v=${youtubeVideoId}`;
+
+    await supabase
+      .from("scripts")
+      .update({
+        publish_status: "published",
+        youtube_video_id: youtubeVideoId,
+        youtube_url: youtubeUrl,
+        published_at: new Date().toISOString(),
+      })
+      .eq("id", scriptId);
 
     return NextResponse.json({
       ok: true,
-      videoUrl: renderData.videoUrl,
-      youtubeUrl: uploadData.youtubeUrl,
-      youtubeVideoId: uploadData.youtubeVideoId,
+      videoUrl,
+      youtubeVideoId,
+      youtubeUrl,
     });
-  } catch (error: any) {
+  } catch (err: any) {
     return NextResponse.json(
-      { ok: false, error: error.message || "Publish failed" },
+      { ok: false, error: err.message || "One-click publish failed" },
       { status: 500 }
     );
   }
