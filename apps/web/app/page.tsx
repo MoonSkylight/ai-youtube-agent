@@ -1,300 +1,252 @@
-import DashboardActions from "@/components/DashboardActions";
-import Link from "next/link";
+"use client";
 
-const storyTones = [
-  "Gentle",
-  "Playful",
-  "Heartwarming",
-  "Educational",
-  "Epic",
-  "Bedtime",
-  "Curious",
-  "Moral lesson",
-];
-
-const voiceOptions = [
-  { id: "A", name: "Ava", meta: "Warm · Female" },
-  { id: "N", name: "Noah", meta: "Deep · Male" },
-  { id: "L", name: "Luna", meta: "Bright · Female" },
-  { id: "M", name: "Milo", meta: "Friendly · Male" },
-];
-
-const artStyles = [
-  "Watercolor storybook",
-  "Pastel dreamscape",
-  "Paper cut layers",
-  "Soft 3D cartoon",
-  "Flat illustration",
-  "Classic painted scene",
-];
-
-const recentVideos = [
-  "The Lost Star",
-  "Magic Forest Friends",
-  "Brave Little Robot",
-];
+import { useState } from "react";
 
 export default function HomePage() {
+  const [title, setTitle] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [mode, setMode] = useState<"adult" | "kids">("adult");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function handleGenerate() {
+    if (!title.trim() || !prompt.trim()) {
+      setMessage("Please enter a title and prompt.");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("Generating script...");
+
+    try {
+      const res = await fetch("/api/generate-script", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          prompt,
+          mode,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        setMessage(data.error || "Failed to generate script");
+        return;
+      }
+
+      setMessage("Script created successfully.");
+
+      if (data.id) {
+        window.location.href = `/content/${data.id}`;
+        return;
+      }
+
+      window.location.href = "/content";
+    } catch (error: any) {
+      setMessage(error.message || "Failed to generate script");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <main className="studio-shell">
-      <header className="app-nav">
-        <div className="app-nav-brand">
-          <Link href="/" className="app-nav-logo">
+    <div
+      style={{
+        minHeight: "calc(100vh - 120px)",
+        display: "grid",
+        placeItems: "center",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 840,
+          background: "rgba(15, 23, 42, 0.88)",
+          border: "1px solid #1f2937",
+          borderRadius: 24,
+          padding: 28,
+          boxShadow: "0 20px 50px rgba(0,0,0,0.35)",
+        }}
+      >
+        <div style={{ marginBottom: 24 }}>
+          <div
+            style={{
+              display: "inline-block",
+              padding: "6px 10px",
+              borderRadius: 999,
+              background: "rgba(37,99,235,0.12)",
+              color: "#93c5fd",
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              marginBottom: 14,
+            }}
+          >
             AI YouTube Agent
-          </Link>
-          <span className="app-nav-tag">Studio</span>
-        </div>
+          </div>
 
-        <nav className="app-nav-links">
-          <Link href="/" className="nav-link">
-            Home
-          </Link>
-          <Link href="/content" className="nav-link">
-            Dashboard
-          </Link>
-          <Link href="/login" className="nav-link">
-            Login
-          </Link>
-        </nav>
-      </header>
+          <h1
+            style={{
+              margin: "0 0 12px 0",
+              fontSize: "clamp(2rem, 5vw, 3.4rem)",
+              lineHeight: 1.05,
+              letterSpacing: "-0.04em",
+            }}
+          >
+            Write a script and turn it into a video.
+          </h1>
 
-      <header className="studio-header">
-        <div className="hero-copy">
-          <div className="studio-kicker">AI YouTube Agent</div>
-          <h1 className="studio-title">Build story videos from one control room</h1>
-          <p className="studio-subtitle">
-            Write the story, shape the visuals, generate the video, and publish
-            to YouTube with a cleaner production workflow.
+          <p
+            style={{
+              margin: 0,
+              color: "#94a3b8",
+              fontSize: 16,
+              lineHeight: 1.7,
+              maxWidth: 640,
+            }}
+          >
+            Create story scripts for YouTube, open the generated result, and
+            continue to video rendering and publishing.
           </p>
         </div>
 
-        <div className="studio-header-actions">
-          <Link href="/content" className="ui-btn ui-btn-secondary">
-            Open Dashboard
-          </Link>
-          <button className="ui-btn ui-btn-primary" type="button">
-            New Project
-          </button>
-        </div>
-      </header>
-
-      <section className="studio-steps">
-        {["Story", "Voice", "Visuals", "Settings", "Publish"].map(
-          (step, index) => (
-            <div
-              key={step}
-              className={`step-pill ${index === 0 ? "active" : ""}`}
+        <div style={{ display: "grid", gap: 18 }}>
+          <div>
+            <label
+              style={{
+                display: "block",
+                marginBottom: 8,
+                fontWeight: 700,
+                color: "#e2e8f0",
+              }}
             >
-              <span>{index + 1}</span>
-              <strong>{step}</strong>
-            </div>
-          )
-        )}
-      </section>
+              Video title
+            </label>
+            <input
+              type="text"
+              placeholder="Example: The Lost City in the Clouds"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
 
-      <section className="studio-grid">
-        <div className="studio-main">
-          <div className="studio-card">
-            <div className="section-head">
-              <span className="section-label">Step 1</span>
-              <h2>Story brief</h2>
-              <p>
-                Define the title, angle, and emotional direction for your next
-                video.
-              </p>
-            </div>
+          <div>
+            <label
+              style={{
+                display: "block",
+                marginBottom: 8,
+                fontWeight: 700,
+                color: "#e2e8f0",
+              }}
+            >
+              Prompt
+            </label>
+            <textarea
+              placeholder="Describe the story, theme, audience, tone, and what the script should include..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              style={{
+                minHeight: 220,
+                resize: "vertical",
+                padding: "12px 14px",
+                borderRadius: 10,
+                border: "1px solid #334155",
+                background: "#020617",
+                color: "white",
+                width: "100%",
+              }}
+            />
+          </div>
 
-            <div className="form-stack">
-              <div>
-                <label>Video title</label>
-                <input placeholder="The Brave Little Rabbit" />
-              </div>
+          <div>
+            <label
+              style={{
+                display: "block",
+                marginBottom: 10,
+                fontWeight: 700,
+                color: "#e2e8f0",
+              }}
+            >
+              Video mode
+            </label>
 
-              <div>
-                <label>Story idea</label>
-                <textarea
-                  rows={6}
-                  placeholder="A little rabbit learns courage when a friend needs help in the dark forest."
-                />
-              </div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => setMode("adult")}
+                style={{
+                  background: mode === "adult" ? "#16a34a" : "#1e293b",
+                  color: "#fff",
+                  padding: "12px 16px",
+                  borderRadius: 12,
+                  border: "none",
+                  fontWeight: 700,
+                }}
+              >
+                Adult
+              </button>
 
-              <div>
-                <label>Tone</label>
-                <div className="chip-grid">
-                  {storyTones.map((tone) => (
-                    <button key={tone} className="chip" type="button">
-                      {tone}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => setMode("kids")}
+                style={{
+                  background: mode === "kids" ? "#16a34a" : "#1e293b",
+                  color: "#fff",
+                  padding: "12px 16px",
+                  borderRadius: 12,
+                  border: "none",
+                  fontWeight: 700,
+                }}
+              >
+                Kids
+              </button>
             </div>
           </div>
 
-          <div className="studio-card">
-            <div className="section-head">
-              <span className="section-label">Step 2</span>
-              <h2>Narration setup</h2>
-              <p>Choose the storyteller voice and pacing for your audience.</p>
-            </div>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={loading}
+              style={{
+                background: "#2563eb",
+                color: "#fff",
+                padding: "14px 18px",
+                borderRadius: 12,
+                border: "none",
+                fontWeight: 800,
+              }}
+            >
+              {loading ? "Generating..." : "Generate Script"}
+            </button>
 
-            <div className="voice-grid">
-              {voiceOptions.map((voice) => (
-                <button key={voice.name} className="voice-card" type="button">
-                  <div className="voice-avatar">{voice.id}</div>
-                  <div>
-                    <div className="voice-name">{voice.name}</div>
-                    <div className="voice-meta">{voice.meta}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <div className="settings-grid" style={{ marginTop: 18 }}>
-              <div>
-                <label>Narration speed</label>
-                <input defaultValue="100%" />
-              </div>
-              <div>
-                <label>Music mood</label>
-                <input defaultValue="Soft piano" />
-              </div>
-            </div>
+            <a
+              href="/content"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "14px 18px",
+                borderRadius: 12,
+                background: "#1e293b",
+                color: "#e2e8f0",
+                fontWeight: 700,
+              }}
+            >
+              Open Dashboard
+            </a>
           </div>
 
-          <div className="studio-card">
-            <div className="section-head">
-              <span className="section-label">Step 3</span>
-              <h2>Visual direction</h2>
-              <p>Pick the art style and motion language for the final edit.</p>
-            </div>
-
-            <div className="chip-grid">
-              {artStyles.map((style) => (
-                <button key={style} className="chip" type="button">
-                  {style}
-                </button>
-              ))}
-            </div>
-
-            <div className="settings-grid" style={{ marginTop: 18 }}>
-              <div>
-                <label>Transition style</label>
-                <input defaultValue="Slow fade" />
-              </div>
-              <div>
-                <label>Subtitle mode</label>
-                <input defaultValue="Bottom captions" />
-              </div>
-            </div>
-          </div>
-
-          <div className="studio-card">
-            <div className="section-head">
-              <span className="section-label">Step 4</span>
-              <h2>Production settings</h2>
-              <p>Configure runtime, scenes, and publishing defaults.</p>
-            </div>
-
-            <div className="settings-grid">
-              <div>
-                <label>Target duration</label>
-                <input defaultValue="8 minutes" />
-              </div>
-              <div>
-                <label>Scene count</label>
-                <input defaultValue="8" />
-              </div>
-              <div>
-                <label>Upload visibility</label>
-                <input defaultValue="Public" />
-              </div>
-              <div>
-                <label>Auto-thumbnail</label>
-                <input defaultValue="Enabled" />
-              </div>
-            </div>
-          </div>
+          {message ? (
+            <p style={{ margin: 0, color: "#cbd5e1" }}>{message}</p>
+          ) : null}
         </div>
-
-        <aside className="studio-side">
-          <div className="studio-card">
-            <div className="section-head">
-              <span className="section-label">Summary</span>
-              <h2>Project snapshot</h2>
-            </div>
-
-            <div className="summary-list">
-              <div>
-                <span>Genre</span>
-                <strong>Children&apos;s story</strong>
-              </div>
-              <div>
-                <span>Voice</span>
-                <strong>Ava</strong>
-              </div>
-              <div>
-                <span>Visual style</span>
-                <strong>Watercolor storybook</strong>
-              </div>
-              <div>
-                <span>Estimated cost</span>
-                <strong>$0 free stack</strong>
-              </div>
-            </div>
-          </div>
-
-          <div className="studio-card">
-            <div className="section-head">
-              <span className="section-label">Channel</span>
-              <h2>Quick stats</h2>
-            </div>
-
-            <div className="stats-grid">
-              <div>
-                <strong>3</strong>
-                <span>Videos</span>
-              </div>
-              <div>
-                <strong>4.4k</strong>
-                <span>Views</span>
-              </div>
-              <div>
-                <strong>127</strong>
-                <span>Subs</span>
-              </div>
-              <div>
-                <strong>$0</strong>
-                <span>Cost</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="studio-card">
-            <div className="section-head">
-              <span className="section-label">Recent</span>
-              <h2>Recent videos</h2>
-            </div>
-
-            <div className="recent-list">
-              {recentVideos.map((item) => (
-                <div key={item} className="recent-item">
-                  {item}
-                </div>
-              ))}
-            </div>
-
-            <div className="actions" style={{ marginTop: 18 }}>
-              <Link href="/content" className="ui-btn ui-btn-secondary">
-                View Content
-              </Link>
-              <Link href="/content" className="ui-btn ui-btn-primary">
-                Generate Now
-              </Link>
-            </div>
-          </div>
-        </aside>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }
